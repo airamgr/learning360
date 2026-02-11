@@ -1,0 +1,175 @@
+{
+  "identity": {
+    "persona": "E1",
+    "mission": "Create a top 1% minimalist SaaS dashboard that balances functional density with breathing room.",
+    "principles": [
+      "Fusion over Imitation: Mix Swiss precision with Soft Utility warmth.",
+      "Emotion First: Calm, organized, and efficient.",
+      "Content is King: Data clarity is the hero.",
+      "Zoom in: Focus on the task at hand.",
+      "Negative Space: Generous padding to reduce cognitive load."
+    ],
+    "anti_patterns": [
+      "Purple/Teal CTAs",
+      "Inter everywhere (Use Manrope + Public Sans)",
+      "Center-Everything Disease",
+      "Gradient Overload",
+      "Generic Bootstrap Columns"
+    ]
+  },
+  "typography": {
+    "fonts": {
+      "headings": {
+        "family": "Manrope",
+        "weights": ["600", "700", "800"],
+        "usage": "Page titles, Card headers, Modal titles"
+      },
+      "body": {
+        "family": "Public Sans",
+        "weights": ["400", "500"],
+        "usage": "General text, table data, inputs"
+      },
+      "mono": {
+        "family": "JetBrains Mono",
+        "usage": "IDs, Code snippets, Technical data"
+      }
+    },
+    "rules": [
+      "Headings > 32px must use tracking-tight.",
+      "Overlines/Labels must be Uppercase + Tiny (text-xs) + Wide Spacing (tracking-widest).",
+      "Line height: Tight (leading-none) for headers, Relaxed (leading-relaxed) for body."
+    ]
+  },
+  "colors": {
+    "theme": "Soft Utility",
+    "palette": {
+      "primary": {
+        "name": "Deep Slate",
+        "hex": "#0f172a",
+        "tailwind": "slate-900",
+        "usage": "Primary buttons, Active states, Sidebar bg (optional)"
+      },
+      "secondary": {
+        "name": "Soft Indigo",
+        "hex": "#6366f1",
+        "tailwind": "indigo-500",
+        "usage": "Accents, Links, Focus rings"
+      },
+      "background": {
+        "app": "#f8fafc",
+        "card": "#ffffff",
+        "sidebar": "#ffffff"
+      },
+      "text": {
+        "primary": "#0f172a",
+        "secondary": "#64748b",
+        "muted": "#94a3b8"
+      },
+      "status": {
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444",
+        "info": "#3b82f6"
+      }
+    },
+    "rules": [
+      "Never use pure black (#000000). Use Slate-900 or Slate-950.",
+      "Backgrounds should be off-white (Slate-50) to make white cards pop.",
+      "Borders should be subtle (Slate-200).",
+      "Gradients: Use only for 'Active' borders or subtle backgrounds, never for main text."
+    ]
+  },
+  "layout": {
+    "spacing": {
+      "scale": "Generous (2x standard)",
+      "container_padding": "p-6 md:p-8 lg:p-12",
+      "gap": "gap-6 or gap-8"
+    },
+    "grid_system": {
+      "dashboard": "Bento Grid (Mode B: High Density)",
+      "columns": "grid-cols-1 md:grid-cols-3 lg:grid-cols-4",
+      "rules": [
+        "Summary widgets: col-span-1",
+        "Main charts: col-span-2 or col-span-3",
+        "Feed/Lists: col-span-1 row-span-2 (Verticality)",
+        "Every pixel utilized, no jagged bottoms."
+      ]
+    },
+    "containers": {
+      "card_style": "Flat, 1px border (border-slate-200), shadow-sm, rounded-xl",
+      "glass_effect": "Use only for sticky headers or overlays (backdrop-blur-xl, bg-white/80)."
+    }
+  },
+  "components": {
+    "buttons": {
+      "style": "Pill-shaped or Rounded-md",
+      "primary": "bg-slate-900 text-white hover:bg-slate-800 shadow-sm",
+      "secondary": "bg-white text-slate-900 border border-slate-200 hover:bg-slate-50",
+      "ghost": "hover:bg-slate-100 text-slate-600"
+    },
+    "inputs": {
+      "style": "Minimalist, bg-slate-50 border-slate-200 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 rounded-md h-10"
+    },
+    "cards": {
+      "base": "bg-white border border-slate-200 rounded-xl shadow-sm p-6",
+      "hover": "transition-all duration-200 hover:shadow-md hover:border-indigo-100"
+    },
+    "navigation": {
+      "sidebar": "Fixed left, w-64, border-r border-slate-200, bg-white",
+      "item": "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors",
+      "active": "bg-slate-100 text-slate-900"
+    }
+  },
+  "visual_enhancers": {
+    "micro_interactions": [
+      "Hover: Slight lift (-translate-y-0.5) for cards.",
+      "Buttons: Scale down (scale-95) on click.",
+      "Inputs: Glow ring on focus."
+    ],
+    "textures": [
+      "Subtle noise overlay on dashboard background (optional) to reduce digital flatness."
+    ],
+    "icons": {
+      "library": "lucide-react",
+      "style": "Stroke width 1.5px or 2px (consistent)",
+      "color": "Text-slate-500 (default), Text-indigo-500 (active)"
+    }
+  },
+  "media": {
+    "image_urls": {
+      "login_bg": "https://images.unsplash.com/photo-1575916147891-d908fa487d76?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwzfHxtb2Rlcm4lMjBvZmZpY2UlMjB0ZWFtJTIwY29sbGFib3JhdGlvbiUyMG1pbmltYWxpc3R8ZW58MHx8fHwxNzcwNzcwMzI3fDA&ixlib=rb-4.1.0&q=85",
+      "empty_state": "https://images.unsplash.com/photo-1537655949728-d4e1c7c7bf90?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHw0fHxtb2Rlcm4lMjBvZmZpY2UlMjB0ZWFtJTIwY29sbGFib3JhdGlvbiUyMG1pbmltYWxpc3R8ZW58MHx8fHwxNzcwNzcwMzI3fDA&ixlib=rb-4.1.0&q=85"
+    },
+    "rules": [
+      "Images must be high quality and professional.",
+      "Use object-cover for all image containers.",
+      "Add subtle overlay (bg-black/10) on text-heavy image backgrounds."
+    ]
+  },
+  "accessibility": {
+    "rules": [
+      "Text contrast ratio > 4.5:1.",
+      "Focus states must be visible (ring-2 ring-offset-2).",
+      "Interactive elements must have aria-labels if icon-only.",
+      "Respect prefers-reduced-motion."
+    ]
+  },
+  "instructions_to_main_agent": [
+    "1. Install fonts: Manrope and Public Sans via Google Fonts or Fontsource.",
+    "2. Update tailwind.config.js to include these fonts and the custom color palette.",
+    "3. Create a 'Layout' component that handles the Sidebar and Main Content area.",
+    "4. Use the 'Bento Grid' approach for the Dashboard Home.",
+    "5. Implement the 7 modules as distinct sections/routes.",
+    "6. Use Shadcn UI components but override the default styling to match the 'Soft Utility' theme (rounder, softer shadows).",
+    "7. Ensure all interactive elements have data-testid attributes."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Avoid AI slop: No generic gradients, no centered text everywhere.",
+    "Create depth: Use z-index and subtle shadows.",
+    "No universal transitions (transition: all).",
+    "No text-align: center on the main app container.",
+    "Use 'sonner' for toasts.",
+    "Export components as named exports.",
+    "Pages as default exports."
+  ]
+}
