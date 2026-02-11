@@ -440,146 +440,130 @@ export default function ProjectDetail() {
 
       {/* Task Detail Dialog */}
       <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl">
               {selectedTask?.title}
             </DialogTitle>
           </DialogHeader>
           {selectedTask && (
-            <ScrollArea className="max-h-[60vh] pr-4">
-              <div className="space-y-6">
-                {/* Description */}
-                {selectedTask.description && (
-                  <div>
-                    <h4 className="text-sm font-medium text-slate-500 mb-2">
-                      Descripción
-                    </h4>
-                    <p className="text-slate-700">{selectedTask.description}</p>
-                  </div>
-                )}
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="details" className="gap-2">
+                  <ListChecks className="w-4 h-4" />
+                  Detalles y Checklist
+                </TabsTrigger>
+                <TabsTrigger value="deliverables" className="gap-2">
+                  <FolderOpen className="w-4 h-4" />
+                  Entregables ({selectedTask.deliverables?.length || 0})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="details">
+                <ScrollArea className="max-h-[50vh] pr-4">
+                  <div className="space-y-6 pt-4">
+                    {/* Description */}
+                    {selectedTask.description && (
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-500 mb-2">
+                          Descripción
+                        </h4>
+                        <p className="text-slate-700">{selectedTask.description}</p>
+                      </div>
+                    )}
 
-                {/* Status */}
-                <div>
-                  <h4 className="text-sm font-medium text-slate-500 mb-2">
-                    Estado
-                  </h4>
-                  <Select
-                    value={selectedTask.status}
-                    onValueChange={(value) => {
-                      handleStatusChange(selectedTask.id, value);
-                      setSelectedTask({ ...selectedTask, status: value });
-                    }}
-                  >
-                    <SelectTrigger
-                      className="w-48"
-                      data-testid="task-status-select"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pendiente</SelectItem>
-                      <SelectItem value="in_progress">En Progreso</SelectItem>
-                      <SelectItem value="completed">Completada</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Checklist */}
-                {selectedTask.checklist?.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-slate-500 mb-3">
-                      Checklist
-                    </h4>
-                    <div className="space-y-2">
-                      {selectedTask.checklist.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                    {/* Status */}
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-500 mb-2">
+                        Estado
+                      </h4>
+                      <Select
+                        value={selectedTask.status}
+                        onValueChange={(value) => {
+                          handleStatusChange(selectedTask.id, value);
+                          setSelectedTask({ ...selectedTask, status: value });
+                        }}
+                      >
+                        <SelectTrigger
+                          className="w-48"
+                          data-testid="task-status-select"
                         >
-                          <Checkbox
-                            checked={item.completed}
-                            onCheckedChange={() => {
-                              handleChecklistToggle(selectedTask, item.id);
-                              const updated = selectedTask.checklist.map((c) =>
-                                c.id === item.id
-                                  ? { ...c, completed: !c.completed }
-                                  : c
-                              );
-                              setSelectedTask({
-                                ...selectedTask,
-                                checklist: updated,
-                              });
-                            }}
-                            data-testid={`checklist-${item.id}`}
-                          />
-                          <span
-                            className={`text-sm ${
-                              item.completed
-                                ? "text-slate-400 line-through"
-                                : "text-slate-700"
-                            }`}
-                          >
-                            {item.text}
-                          </span>
-                        </div>
-                      ))}
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pendiente</SelectItem>
+                          <SelectItem value="in_progress">En Progreso</SelectItem>
+                          <SelectItem value="completed">Completada</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </div>
-                )}
 
-                {/* Deliverables */}
-                {selectedTask.deliverables?.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-slate-500 mb-3">
-                      Entregables
-                    </h4>
-                    <div className="space-y-2">
-                      {selectedTask.deliverables.map((item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
-                        >
-                          <Checkbox
-                            checked={item.completed}
-                            onCheckedChange={() => {
-                              handleDeliverableToggle(selectedTask, item.id);
-                              const updated = selectedTask.deliverables.map(
-                                (d) =>
-                                  d.id === item.id
-                                    ? { ...d, completed: !d.completed }
-                                    : d
-                              );
-                              setSelectedTask({
-                                ...selectedTask,
-                                deliverables: updated,
-                              });
-                            }}
-                            data-testid={`deliverable-${item.id}`}
-                          />
-                          <FileText
-                            className={`w-4 h-4 ${
-                              item.completed
-                                ? "text-emerald-500"
-                                : "text-slate-400"
-                            }`}
-                          />
-                          <span
-                            className={`text-sm ${
-                              item.completed
-                                ? "text-slate-400 line-through"
-                                : "text-slate-700"
-                            }`}
-                          >
-                            {item.name}
-                          </span>
+                    {/* Checklist */}
+                    {selectedTask.checklist?.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-500 mb-3">
+                          Checklist ({selectedTask.checklist.filter(c => c.completed).length}/{selectedTask.checklist.length})
+                        </h4>
+                        <div className="space-y-2">
+                          {selectedTask.checklist.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                            >
+                              <Checkbox
+                                checked={item.completed}
+                                onCheckedChange={() => {
+                                  handleChecklistToggle(selectedTask, item.id);
+                                  const updated = selectedTask.checklist.map((c) =>
+                                    c.id === item.id
+                                      ? { ...c, completed: !c.completed }
+                                      : c
+                                  );
+                                  setSelectedTask({
+                                    ...selectedTask,
+                                    checklist: updated,
+                                  });
+                                }}
+                                data-testid={`checklist-${item.id}`}
+                              />
+                              <span
+                                className={`text-sm ${
+                                  item.completed
+                                    ? "text-slate-400 line-through"
+                                    : "text-slate-700"
+                                }`}
+                              >
+                                {item.text}
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </ScrollArea>
+                </ScrollArea>
+              </TabsContent>
+              
+              <TabsContent value="deliverables">
+                <ScrollArea className="max-h-[50vh] pr-4">
+                  <div className="pt-4">
+                    <DeliverableRepository
+                      deliverables={selectedTask.deliverables || []}
+                      taskId={selectedTask.id}
+                      taskTitle={null}
+                      onUpdate={() => {
+                        fetchProject();
+                        // Refresh selected task
+                        api.getTask(selectedTask.id).then(res => {
+                          setSelectedTask(res.data);
+                        });
+                      }}
+                      isManager={isManager}
+                    />
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
