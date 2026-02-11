@@ -416,9 +416,13 @@ export default function ProjectDetail() {
                                 )}
                                 {task.deliverables?.length > 0 && (
                                   <span className="flex items-center gap-1">
-                                    <FileText className="w-3 h-3" />
-                                    {deliverablesCompleted}/
-                                    {task.deliverables.length} entregables
+                                    <FolderOpen className="w-3 h-3" />
+                                    {deliverablesWithFiles}/{task.deliverables.length} archivos
+                                    {deliverablesApproved > 0 && (
+                                      <span className="text-emerald-600 ml-1">
+                                        ({deliverablesApproved} aprobados)
+                                      </span>
+                                    )}
                                   </span>
                                 )}
                               </div>
