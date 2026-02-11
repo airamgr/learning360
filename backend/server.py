@@ -722,13 +722,33 @@ def generate_tasks_for_modules(project_id: str, modules: List[str], end_date: st
         if module_id in MODULE_TEMPLATES:
             template = MODULE_TEMPLATES[module_id]
             for task_template in template["tasks"]:
+                # Create deliverables with full structure
+                deliverables = []
+                for item in task_template["deliverables"]:
+                    deliverables.append({
+                        "id": str(uuid.uuid4()),
+                        "name": item["name"],
+                        "description": "",
+                        "status": "pending",
+                        "due_date": end_date,
+                        "file_name": None,
+                        "file_url": None,
+                        "file_size": None,
+                        "file_type": None,
+                        "uploaded_at": None,
+                        "uploaded_by": None,
+                        "feedback": None,
+                        "reviewed_by": None,
+                        "reviewed_at": None
+                    })
+                
                 task = Task(
                     project_id=project_id,
                     module_id=module_id,
                     title=task_template["title"],
                     description=task_template["description"],
                     checklist=[{**item, "id": str(uuid.uuid4())} for item in task_template["checklist"]],
-                    deliverables=[{**item, "id": str(uuid.uuid4())} for item in task_template["deliverables"]],
+                    deliverables=deliverables,
                     due_date=end_date
                 )
                 task_doc = task.model_dump()
