@@ -95,6 +95,36 @@ export const api = {
   
   // User Types
   getUserTypes: () => axios.get(`${API}/user-types`, { headers: getAuthHeader() }),
+  
+  // Roles
+  getRoles: () => axios.get(`${API}/roles`, { headers: getAuthHeader() }),
+
+  // Admin - User Types
+  adminGetUserTypes: () => axios.get(`${API}/admin/user-types`, { headers: getAuthHeader() }),
+  adminCreateUserType: (data) => axios.post(`${API}/admin/user-types`, data, { headers: getAuthHeader() }),
+  adminUpdateUserType: (typeId, data) => axios.put(`${API}/admin/user-types/${typeId}`, data, { headers: getAuthHeader() }),
+  adminDeleteUserType: (typeId) => axios.delete(`${API}/admin/user-types/${typeId}`, { headers: getAuthHeader() }),
+
+  // Admin - Roles
+  adminGetRoles: () => axios.get(`${API}/admin/roles`, { headers: getAuthHeader() }),
+  adminCreateRole: (data) => axios.post(`${API}/admin/roles`, data, { headers: getAuthHeader() }),
+  adminUpdateRole: (roleId, data) => axios.put(`${API}/admin/roles/${roleId}`, data, { headers: getAuthHeader() }),
+  adminDeleteRole: (roleId) => axios.delete(`${API}/admin/roles/${roleId}`, { headers: getAuthHeader() }),
+
+  // Admin - Modules
+  adminGetModules: () => axios.get(`${API}/admin/modules`, { headers: getAuthHeader() }),
+  adminCreateModule: (data) => axios.post(`${API}/admin/modules`, data, { headers: getAuthHeader() }),
+  adminUpdateModule: (moduleId, data) => axios.put(`${API}/admin/modules/${moduleId}`, data, { headers: getAuthHeader() }),
+  adminDeleteModule: (moduleId) => axios.delete(`${API}/admin/modules/${moduleId}`, { headers: getAuthHeader() }),
+
+  // Admin - Task Templates
+  adminGetModuleTasks: (moduleId) => axios.get(`${API}/admin/modules/${moduleId}/tasks`, { headers: getAuthHeader() }),
+  adminCreateTaskTemplate: (moduleId, data) => axios.post(`${API}/admin/modules/${moduleId}/tasks`, data, { headers: getAuthHeader() }),
+  adminUpdateTaskTemplate: (moduleId, taskId, data) => axios.put(`${API}/admin/modules/${moduleId}/tasks/${taskId}`, data, { headers: getAuthHeader() }),
+  adminDeleteTaskTemplate: (moduleId, taskId) => axios.delete(`${API}/admin/modules/${moduleId}/tasks/${taskId}`, { headers: getAuthHeader() }),
+
+  // Admin - Stats
+  adminGetStats: () => axios.get(`${API}/admin/stats`, { headers: getAuthHeader() }),
 
   // Dashboard
   getDashboardStats: () =>
