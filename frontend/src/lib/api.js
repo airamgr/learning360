@@ -92,6 +92,9 @@ export const api = {
 
   // Modules
   getModules: () => axios.get(`${API}/modules`, { headers: getAuthHeader() }),
+  
+  // User Types
+  getUserTypes: () => axios.get(`${API}/user-types`, { headers: getAuthHeader() }),
 
   // Dashboard
   getDashboardStats: () =>
