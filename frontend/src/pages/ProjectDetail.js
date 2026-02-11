@@ -383,8 +383,11 @@ export default function ProjectDetail() {
                       return (
                         <div
                           key={task.id}
-                          className="p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
-                          onClick={() => openTaskDialog(task)}
+                          className="p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer relative z-10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openTaskDialog(task);
+                          }}
                           data-testid={`task-${task.id}`}
                         >
                           <div className="flex items-start justify-between gap-4">
