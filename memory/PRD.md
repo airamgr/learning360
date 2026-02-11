@@ -8,16 +8,19 @@ Herramienta para gestionar proyectos eLearning 360 como un modelo. Los proyectos
 ### Backend (FastAPI + MongoDB)
 - **Autenticación**: JWT con roles (admin, project_manager, collaborator)
 - **Base de datos**: MongoDB
+- **Almacenamiento de archivos**: /app/backend/uploads/
 - **Endpoints principales**:
   - `/api/auth/*` - Registro, login, usuario actual
   - `/api/projects/*` - CRUD proyectos
   - `/api/tasks/*` - Gestión de tareas
+  - `/api/tasks/{id}/deliverables/*` - Repositorio de entregables (NUEVO)
   - `/api/users/*` - Gestión de usuarios (admin)
   - `/api/notifications/*` - Notificaciones
   - `/api/modules` - Templates de módulos
 
 ### Frontend (React + Tailwind + Shadcn)
 - **Páginas**: Login, Register, Dashboard, Projects, ProjectDetail, NewProject, Users, Profile
+- **Componentes**: DeliverableRepository (NUEVO)
 - **Diseño**: Moderno/minimalista con paleta Soft Utility (Slate-900, Indigo-500)
 
 ## Módulos del Sistema
@@ -34,7 +37,13 @@ Herramienta para gestionar proyectos eLearning 360 como un modelo. Los proyectos
 - ✅ Dashboard con estadísticas
 - ✅ CRUD de proyectos
 - ✅ Generación automática de tareas por módulo
-- ✅ Gestión de checklists y entregables
+- ✅ Gestión de checklists
+- ✅ **Repositorio de Entregables (NUEVO)**:
+  - Subida de archivos físicos por entregable
+  - Estados: pendiente, en_revisión, aprobado, rechazado
+  - Sistema de feedback y revisión
+  - Tracking de reviewer y fechas
+  - Descarga de archivos
 - ✅ Exportación a PDF
 - ✅ Sistema de notificaciones in-app
 - ✅ Gestión de usuarios (admin)
@@ -43,6 +52,7 @@ Herramienta para gestionar proyectos eLearning 360 como un modelo. Los proyectos
 ## Integraciones
 - **Email (Resend)**: Configurado pero requiere API key para envío real
 - **PDF (ReportLab)**: Funcional
+- **File Storage**: Local uploads directory
 
 ## Backlog (P0/P1/P2)
 
@@ -53,16 +63,17 @@ Herramienta para gestionar proyectos eLearning 360 como un modelo. Los proyectos
 - Configurar Resend API key para notificaciones email
 - Asignación de tareas a usuarios específicos
 - Filtros avanzados por módulo en lista de tareas
-- Calendario visual de fechas límite
+- Vista de calendario visual de entregas
 
 ### P2 - Deseable
 - Comentarios en tareas
-- Adjuntos en entregables
+- Versionado de archivos en entregables
 - Dashboard de reporting por cliente
 - Plantillas de proyecto personalizables
 - Exportación a Excel
+- Storage cloud (S3) para archivos
 
 ## Usuarios/Personas
-1. **Admin**: Control total, gestión de usuarios
-2. **Project Manager**: Crear/editar proyectos, gestionar tareas
-3. **Colaborador**: Ver proyectos, actualizar tareas asignadas
+1. **Admin**: Control total, gestión de usuarios, revisión de entregables
+2. **Project Manager**: Crear/editar proyectos, revisar entregables, gestionar tareas
+3. **Colaborador**: Ver proyectos, subir entregables, actualizar tareas asignadas
