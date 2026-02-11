@@ -89,8 +89,8 @@ class DeliverableAPITester:
         
         # Login with test credentials
         login_data = {
-            "email": "admin@test.com",
-            "password": "password123"
+            "email": "admin_004921@test.com",  # Known admin from previous tests
+            "password": "TestPass123!"
         }
         
         response = self.run_test("Admin Login", "POST", "auth/login", 200, login_data)
