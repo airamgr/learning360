@@ -173,6 +173,7 @@ class TaskCreate(BaseModel):
     module_id: str
     due_date: Optional[str] = None
     assigned_to: Optional[str] = None
+    assigned_user_type: Optional[str] = None  # comercial, marketing, etc.
     checklist: List[dict] = []
     deliverables: List[dict] = []
 
@@ -182,6 +183,7 @@ class TaskUpdate(BaseModel):
     status: Optional[str] = None
     due_date: Optional[str] = None
     assigned_to: Optional[str] = None
+    assigned_user_type: Optional[str] = None
     checklist: Optional[List[dict]] = None
     deliverables: Optional[List[dict]] = None
 
@@ -196,6 +198,7 @@ class Task(BaseModel):
     deliverables: List[dict] = []
     due_date: Optional[str] = None
     assigned_to: Optional[str] = None
+    assigned_user_type: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Notification(BaseModel):
