@@ -133,6 +133,10 @@ class eLearningAPITester:
         response = self.run_test("User Login", "POST", "auth/login", 200, login_data)
         if response:
             self.token = response.get('token')
+            user = response.get('user')
+            # Update admin_user with full info from login
+            if user:
+                self.admin_user = user
             return True
         return False
 
