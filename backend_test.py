@@ -349,19 +349,37 @@ class eLearningAPITester:
         response = self.run_test("Create Regular User", "POST", "auth/register", 200, user_data)
         if response:
             regular_token = response.get('token')
+            regular_user = response.get('user')
+            
+            # Verify user is not admin
+            if regular_user.get('role') != 'admin':
+                self.log_test("Regular user has correct role", True, f"Role: {regular_user.get('role')}")
+            else:
+                self.log_test("Regular user has correct role", False, "User incorrectly has admin role")
             
             # Try to access admin-only endpoint with regular user token
             old_token = self.token
             self.token = regular_token
             
             # This should fail (403)
-            result = self.run_test("Regular User Access Admin Endpoint", "GET", "users", 403)
-            success = result is None  # Should fail
-            self.log_test("Role-based Access Control", success, "Regular user correctly denied admin access" if success else "Regular user incorrectly allowed admin access")
+            try:
+                url = f"{self.base_url}/api/users"
+                headers = {'Authorization': f'Bearer {self.token}', 'Content-Type': 'application/json'}
+                response = requests.get(url, headers=headers, timeout=10)
+                
+                if response.status_code == 403:
+                    self.log_test("Role-based Access Control", True, "Regular user correctly denied admin access")
+                    success = True
+                else:
+                    self.log_test("Role-based Access Control", False, f"Expected 403, got {response.status_code}")
+                    success = False
+            except Exception as e:
+                self.log_test("Role-based Access Control", False, f"Exception: {str(e)}")
+                success = False
             
             # Restore admin token
             self.token = old_token
-            return True
+            return success
         return False
 
     def run_all_tests(self):
