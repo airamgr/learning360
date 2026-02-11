@@ -8,6 +8,7 @@ import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import NewProject from "./pages/NewProject";
 import Users from "./pages/Users";
+import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import Layout from "./components/Layout";
 import "./App.css";
@@ -85,13 +86,14 @@ function AppRoutes() {
         <Route path="projects/new" element={<NewProject />} />
         <Route path="projects/:id" element={<ProjectDetail />} />
         <Route
-          path="users"
+          path="admin"
           element={
             <ProtectedRoute requiredRole="admin">
-              <Users />
+              <Admin />
             </ProtectedRoute>
           }
         />
+        <Route path="users" element={<Navigate to="/admin" replace />} />
         <Route path="profile" element={<Profile />} />
       </Route>
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
