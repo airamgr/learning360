@@ -1463,19 +1463,215 @@ async def mark_all_notifications_read(current_user: dict = Depends(get_current_u
 
 @api_router.get("/modules")
 async def get_modules():
-    modules = []
-    for key, value in MODULE_TEMPLATES.items():
-        modules.append({
-            "id": key,
-            "name": value["name"],
-            "tasks_count": len(value["tasks"])
-        })
-    return modules
+    """Get all modules from DB config"""
+    modules = await get_modules_from_db()
+    return [{
+        "id": m["id"],
+        "name": m["name"],
+        "description": m.get("description", ""),
+        "icon": m.get("icon", "Package"),
+        "color": m.get("color", "slate"),
+        "tasks_count": len(m.get("tasks", []))
+    } for m in modules]
 
 @api_router.get("/user-types")
 async def get_user_types():
     """Get all available user types for task assignment"""
-    return USER_TYPES
+    return await get_user_types_from_db()
+
+@api_router.get("/roles")
+async def get_roles():
+    """Get all available roles"""
+    return await get_roles_from_db()
+
+# ============= ADMIN ENDPOINTS =============
+
+# --- User Types Admin ---
+@api_router.get("/admin/user-types")
+async def admin_get_user_types(current_user: dict = Depends(require_admin)):
+    return await get_user_types_from_db()
+
+@api_router.post("/admin/user-types")
+async def admin_create_user_type(data: UserTypeConfig, current_user: dict = Depends(require_admin)):
+    # Check if ID exists
+    existing = await db.config_user_types.find_one({"id": data.id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya existe un tipo de usuario con ese ID")
+    
+    await db.config_user_types.insert_one(data.model_dump())
+    return {"message": "Tipo de usuario creado", "user_type": data.model_dump()}
+
+@api_router.put("/admin/user-types/{type_id}")
+async def admin_update_user_type(type_id: str, data: UserTypeConfig, current_user: dict = Depends(require_admin)):
+    result = await db.config_user_types.update_one({"id": type_id}, {"$set": data.model_dump()})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Tipo de usuario no encontrado")
+    return {"message": "Tipo de usuario actualizado"}
+
+@api_router.delete("/admin/user-types/{type_id}")
+async def admin_delete_user_type(type_id: str, current_user: dict = Depends(require_admin)):
+    result = await db.config_user_types.delete_one({"id": type_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Tipo de usuario no encontrado")
+    return {"message": "Tipo de usuario eliminado"}
+
+# --- Roles Admin ---
+@api_router.get("/admin/roles")
+async def admin_get_roles(current_user: dict = Depends(require_admin)):
+    return await get_roles_from_db()
+
+@api_router.post("/admin/roles")
+async def admin_create_role(data: RoleConfig, current_user: dict = Depends(require_admin)):
+    existing = await db.config_roles.find_one({"id": data.id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya existe un rol con ese ID")
+    
+    await db.config_roles.insert_one(data.model_dump())
+    return {"message": "Rol creado", "role": data.model_dump()}
+
+@api_router.put("/admin/roles/{role_id}")
+async def admin_update_role(role_id: str, data: RoleConfig, current_user: dict = Depends(require_admin)):
+    result = await db.config_roles.update_one({"id": role_id}, {"$set": data.model_dump()})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Rol no encontrado")
+    return {"message": "Rol actualizado"}
+
+@api_router.delete("/admin/roles/{role_id}")
+async def admin_delete_role(role_id: str, current_user: dict = Depends(require_admin)):
+    # Don't allow deleting built-in roles
+    if role_id in ["admin", "project_manager", "collaborator"]:
+        raise HTTPException(status_code=400, detail="No se pueden eliminar los roles del sistema")
+    
+    result = await db.config_roles.delete_one({"id": role_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Rol no encontrado")
+    return {"message": "Rol eliminado"}
+
+# --- Modules Admin ---
+@api_router.get("/admin/modules")
+async def admin_get_modules(current_user: dict = Depends(require_admin)):
+    return await get_modules_from_db()
+
+@api_router.post("/admin/modules")
+async def admin_create_module(data: ModuleCreate, current_user: dict = Depends(require_admin)):
+    # Generate ID from name
+    module_id = data.name.lower().replace(" ", "_")[:20]
+    
+    existing = await db.config_modules.find_one({"id": module_id})
+    if existing:
+        raise HTTPException(status_code=400, detail="Ya existe un módulo con ese nombre")
+    
+    module_doc = {
+        "id": module_id,
+        "name": data.name,
+        "description": data.description,
+        "icon": data.icon,
+        "color": data.color,
+        "tasks": []
+    }
+    await db.config_modules.insert_one(module_doc)
+    return {"message": "Módulo creado", "module": module_doc}
+
+@api_router.put("/admin/modules/{module_id}")
+async def admin_update_module(module_id: str, data: ModuleUpdate, current_user: dict = Depends(require_admin)):
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+    
+    result = await db.config_modules.update_one({"id": module_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado")
+    return {"message": "Módulo actualizado"}
+
+@api_router.delete("/admin/modules/{module_id}")
+async def admin_delete_module(module_id: str, current_user: dict = Depends(require_admin)):
+    result = await db.config_modules.delete_one({"id": module_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado")
+    return {"message": "Módulo eliminado"}
+
+# --- Task Templates Admin ---
+@api_router.get("/admin/modules/{module_id}/tasks")
+async def admin_get_module_tasks(module_id: str, current_user: dict = Depends(require_admin)):
+    module = await db.config_modules.find_one({"id": module_id}, {"_id": 0})
+    if not module:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado")
+    return module.get("tasks", [])
+
+@api_router.post("/admin/modules/{module_id}/tasks")
+async def admin_create_task_template(module_id: str, data: TaskTemplateCreate, current_user: dict = Depends(require_admin)):
+    module = await db.config_modules.find_one({"id": module_id})
+    if not module:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado")
+    
+    task_template = {
+        "id": str(uuid.uuid4()),
+        **data.model_dump()
+    }
+    
+    tasks = module.get("tasks", [])
+    tasks.append(task_template)
+    
+    await db.config_modules.update_one({"id": module_id}, {"$set": {"tasks": tasks}})
+    return {"message": "Tarea template creada", "task": task_template}
+
+@api_router.put("/admin/modules/{module_id}/tasks/{task_id}")
+async def admin_update_task_template(module_id: str, task_id: str, data: TaskTemplateUpdate, current_user: dict = Depends(require_admin)):
+    module = await db.config_modules.find_one({"id": module_id})
+    if not module:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado")
+    
+    tasks = module.get("tasks", [])
+    updated = False
+    
+    for i, task in enumerate(tasks):
+        if task.get("id") == task_id or task.get("title") == task_id:
+            for key, value in data.model_dump().items():
+                if value is not None:
+                    tasks[i][key] = value
+            updated = True
+            break
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Tarea template no encontrada")
+    
+    await db.config_modules.update_one({"id": module_id}, {"$set": {"tasks": tasks}})
+    return {"message": "Tarea template actualizada"}
+
+@api_router.delete("/admin/modules/{module_id}/tasks/{task_id}")
+async def admin_delete_task_template(module_id: str, task_id: str, current_user: dict = Depends(require_admin)):
+    module = await db.config_modules.find_one({"id": module_id})
+    if not module:
+        raise HTTPException(status_code=404, detail="Módulo no encontrado")
+    
+    tasks = module.get("tasks", [])
+    original_len = len(tasks)
+    tasks = [t for t in tasks if t.get("id") != task_id and t.get("title") != task_id]
+    
+    if len(tasks) == original_len:
+        raise HTTPException(status_code=404, detail="Tarea template no encontrada")
+    
+    await db.config_modules.update_one({"id": module_id}, {"$set": {"tasks": tasks}})
+    return {"message": "Tarea template eliminada"}
+
+# --- Admin Stats ---
+@api_router.get("/admin/stats")
+async def admin_get_stats(current_user: dict = Depends(require_admin)):
+    users_count = await db.users.count_documents({})
+    projects_count = await db.projects.count_documents({})
+    tasks_count = await db.tasks.count_documents({})
+    modules_count = await db.config_modules.count_documents({})
+    user_types_count = await db.config_user_types.count_documents({})
+    roles_count = await db.config_roles.count_documents({})
+    
+    return {
+        "users": users_count,
+        "projects": projects_count,
+        "tasks": tasks_count,
+        "modules": modules_count,
+        "user_types": user_types_count,
+        "roles": roles_count
+    }
 
 # ============= DASHBOARD STATS ENDPOINT =============
 
