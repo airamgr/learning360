@@ -24,6 +24,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "../components/ui/dialog";
 import {
   Tabs,
@@ -173,19 +174,6 @@ export default function ProjectDetail() {
     }
   };
 
-  const handleDeliverableToggle = async (task, deliverableId) => {
-    const updatedDeliverables = task.deliverables.map((item) =>
-      item.id === deliverableId ? { ...item, completed: !item.completed } : item
-    );
-
-    try {
-      await api.updateTask(task.id, { deliverables: updatedDeliverables });
-      fetchProject();
-    } catch (error) {
-      toast.error("Error al actualizar el entregable");
-    }
-  };
-
   const handleExportPdf = async () => {
     setExporting(true);
     try {
@@ -233,13 +221,6 @@ export default function ProjectDetail() {
   }
 
   if (!project) return null;
-
-  const statusLabels = {
-    active: "Activo",
-    completed: "Completado",
-    on_hold: "En Espera",
-    cancelled: "Cancelado",
-  };
 
   return (
     <div className="space-y-6" data-testid="project-detail-page">
@@ -387,7 +368,6 @@ export default function ProjectDetail() {
                       </h3>
                       <p className="text-sm text-slate-500">
                         {moduleData.completed}/{moduleData.total} tareas
-                        completadas
                       </p>
                     </div>
                     <div className="flex items-center gap-3 w-32">
@@ -402,24 +382,14 @@ export default function ProjectDetail() {
                   <div className="space-y-3 mt-2">
                     {moduleData.tasks?.map((task) => {
                       const StatusIcon = STATUS_CONFIG[task.status]?.icon || Circle;
-                      const checklistCompleted = task.checklist?.filter(
-                        (c) => c.completed
-                      ).length;
-                      const deliverablesApproved = task.deliverables?.filter(
-                        (d) => d.status === "approved"
-                      ).length;
-                      const deliverablesWithFiles = task.deliverables?.filter(
-                        (d) => d.file_url
-                      ).length;
+                      const checklistCompleted = task.checklist?.filter((c) => c.completed).length;
+                      const deliverablesWithFiles = task.deliverables?.filter((d) => d.file_url).length;
 
                       return (
                         <div
                           key={task.id}
-                          className="p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer relative z-10"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openTaskDialog(task);
-                          }}
+                          className="p-4 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group"
+                          onClick={() => openTaskDialog(task)}
                           data-testid={`task-${task.id}`}
                         >
                           <div className="flex items-start justify-between gap-4">
@@ -434,7 +404,7 @@ export default function ProjectDetail() {
                                       : "text-slate-400"
                                   }`}
                                 />
-                                <h4 className="font-medium text-slate-900">
+                                <h4 className="font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">
                                   {task.title}
                                 </h4>
                                 {task.assigned_user_type && USER_TYPE_CONFIG[task.assigned_user_type] && (
@@ -450,27 +420,18 @@ export default function ProjectDetail() {
                                 {task.checklist?.length > 0 && (
                                   <span className="flex items-center gap-1">
                                     <CheckCircle2 className="w-3 h-3" />
-                                    {checklistCompleted}/{task.checklist.length}{" "}
-                                    checklist
+                                    {checklistCompleted}/{task.checklist.length} checklist
                                   </span>
                                 )}
                                 {task.deliverables?.length > 0 && (
                                   <span className="flex items-center gap-1">
                                     <FolderOpen className="w-3 h-3" />
                                     {deliverablesWithFiles}/{task.deliverables.length} archivos
-                                    {deliverablesApproved > 0 && (
-                                      <span className="text-emerald-600 ml-1">
-                                        ({deliverablesApproved} aprobados)
-                                      </span>
-                                    )}
                                   </span>
                                 )}
                               </div>
                             </div>
-                            <Badge
-                              className={STATUS_CONFIG[task.status]?.color}
-                              variant="secondary"
-                            >
+                            <Badge className={STATUS_CONFIG[task.status]?.color} variant="secondary">
                               {STATUS_CONFIG[task.status]?.label}
                             </Badge>
                           </div>
@@ -487,15 +448,21 @@ export default function ProjectDetail() {
 
       {/* Task Detail Dialog */}
       <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
+        {/* CORRECCIÓN: Max-height y overflow en el DialogContent */}
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl">
               {selectedTask?.title}
             </DialogTitle>
+            {/* CORRECCIÓN: Añadida DialogDescription para accesibilidad */}
+            <DialogDescription>
+              Gestiona el progreso, checklist y archivos entregables de esta tarea.
+            </DialogDescription>
           </DialogHeader>
+          
           {selectedTask && (
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
+              <TabsList className="grid w-full grid-cols-2 shrink-0">
                 <TabsTrigger value="details" className="gap-2">
                   <ListChecks className="w-4 h-4" />
                   Detalles y Checklist
@@ -506,25 +473,19 @@ export default function ProjectDetail() {
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="details">
-                <ScrollArea className="max-h-[50vh] pr-4">
-                  <div className="space-y-6 pt-4">
-                    {/* Description */}
+              <TabsContent value="details" className="flex-1 overflow-hidden pt-4">
+                <ScrollArea className="h-full max-h-[60vh]">
+                  <div className="space-y-6 pr-4 pb-6">
                     {selectedTask.description && (
                       <div>
-                        <h4 className="text-sm font-medium text-slate-500 mb-2">
-                          Descripción
-                        </h4>
-                        <p className="text-slate-700">{selectedTask.description}</p>
+                        <h4 className="text-sm font-medium text-slate-500 mb-2">Descripción</h4>
+                        <p className="text-slate-700 text-sm">{selectedTask.description}</p>
                       </div>
                     )}
 
-                    {/* Status and User Type */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-sm font-medium text-slate-500 mb-2">
-                          Estado
-                        </h4>
+                        <h4 className="text-sm font-medium text-slate-500 mb-2">Estado</h4>
                         <Select
                           value={selectedTask.status}
                           onValueChange={(value) => {
@@ -532,10 +493,7 @@ export default function ProjectDetail() {
                             setSelectedTask({ ...selectedTask, status: value });
                           }}
                         >
-                          <SelectTrigger
-                            className="w-full"
-                            data-testid="task-status-select"
-                          >
+                          <SelectTrigger className="w-full">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -547,9 +505,7 @@ export default function ProjectDetail() {
                       </div>
 
                       <div>
-                        <h4 className="text-sm font-medium text-slate-500 mb-2">
-                          Asignado a (Tipo)
-                        </h4>
+                        <h4 className="text-sm font-medium text-slate-500 mb-2">Asignado a (Tipo)</h4>
                         <Select
                           value={selectedTask.assigned_user_type || "none"}
                           onValueChange={(value) => {
@@ -558,28 +514,19 @@ export default function ProjectDetail() {
                             setSelectedTask({ ...selectedTask, assigned_user_type: newValue });
                           }}
                         >
-                          <SelectTrigger
-                            className="w-full"
-                            data-testid="task-user-type-select"
-                          >
+                          <SelectTrigger className="w-full">
                             <SelectValue placeholder="Sin asignar" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">Sin asignar</SelectItem>
-                            <SelectItem value="comercial">Comercial</SelectItem>
-                            <SelectItem value="marketing">Marketing</SelectItem>
-                            <SelectItem value="administracion">Administración</SelectItem>
-                            <SelectItem value="creativo">Creativo</SelectItem>
-                            <SelectItem value="contenido">Contenido</SelectItem>
-                            <SelectItem value="academico">Académico</SelectItem>
-                            <SelectItem value="desarrollo">Desarrollo</SelectItem>
-                            <SelectItem value="direccion">Dirección</SelectItem>
+                            {Object.entries(USER_TYPE_CONFIG).map(([id, cfg]) => (
+                              <SelectItem key={id} value={id}>{cfg.name}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
 
-                    {/* Checklist */}
                     {selectedTask.checklist?.length > 0 && (
                       <div>
                         <h4 className="text-sm font-medium text-slate-500 mb-3">
@@ -587,35 +534,21 @@ export default function ProjectDetail() {
                         </h4>
                         <div className="space-y-2">
                           {selectedTask.checklist.map((item) => (
-                            <div
-                              key={item.id}
-                              className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
-                            >
+                            <div key={item.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
                               <Checkbox
+                                id={`check-${item.id}`}
                                 checked={item.completed}
                                 onCheckedChange={() => {
                                   handleChecklistToggle(selectedTask, item.id);
                                   const updated = selectedTask.checklist.map((c) =>
-                                    c.id === item.id
-                                      ? { ...c, completed: !c.completed }
-                                      : c
+                                    c.id === item.id ? { ...c, completed: !c.completed } : c
                                   );
-                                  setSelectedTask({
-                                    ...selectedTask,
-                                    checklist: updated,
-                                  });
+                                  setSelectedTask({ ...selectedTask, checklist: updated });
                                 }}
-                                data-testid={`checklist-${item.id}`}
                               />
-                              <span
-                                className={`text-sm ${
-                                  item.completed
-                                    ? "text-slate-400 line-through"
-                                    : "text-slate-700"
-                                }`}
-                              >
+                              <label htmlFor={`check-${item.id}`} className={`text-sm cursor-pointer select-none ${item.completed ? "text-slate-400 line-through" : "text-slate-700"}`}>
                                 {item.text}
-                              </span>
+                              </label>
                             </div>
                           ))}
                         </div>
@@ -625,19 +558,16 @@ export default function ProjectDetail() {
                 </ScrollArea>
               </TabsContent>
               
-              <TabsContent value="deliverables">
-                <ScrollArea className="max-h-[50vh] pr-4">
-                  <div className="pt-4">
+              <TabsContent value="deliverables" className="flex-1 overflow-hidden pt-4">
+                <ScrollArea className="h-full max-h-[60vh]">
+                  <div className="pr-4 pb-6">
                     <DeliverableRepository
                       deliverables={selectedTask.deliverables || []}
                       taskId={selectedTask.id}
                       taskTitle={null}
                       onUpdate={() => {
                         fetchProject();
-                        // Refresh selected task
-                        api.getTask(selectedTask.id).then(res => {
-                          setSelectedTask(res.data);
-                        });
+                        api.getTask(selectedTask.id).then(res => setSelectedTask(res.data));
                       }}
                       isManager={isManager}
                     />

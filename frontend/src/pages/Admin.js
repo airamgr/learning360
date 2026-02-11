@@ -25,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  DialogDescription,
 } from "../components/ui/dialog";
 import {
   AlertDialog,
@@ -203,11 +204,14 @@ function UserTypesTab() {
         </Table>
       </div>
 
-      {/* Edit/Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onOpenAutoFocus={(e) => {
+          // Si el scroll sigue fallando, esto suele ayudar
+          document.body.style.pointerEvents = 'auto';
+        }}>
           <DialogHeader>
             <DialogTitle>{editingType ? "Editar Tipo de Usuario" : "Nuevo Tipo de Usuario"}</DialogTitle>
+            <DialogDescription>Asigna un ID único y un color para identificar este departamento.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -255,7 +259,6 @@ function UserTypesTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -378,11 +381,14 @@ function RolesTab() {
         </Table>
       </div>
 
-      {/* Edit/Create Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" onOpenAutoFocus={(e) => {
+          // Si el scroll sigue fallando, esto suele ayudar
+          document.body.style.pointerEvents = 'auto';
+        }}>
           <DialogHeader>
             <DialogTitle>{editingRole ? "Editar Rol" : "Nuevo Rol"}</DialogTitle>
+            <DialogDescription>Define el nombre y la descripción de las capacidades de este rol.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -421,7 +427,6 @@ function RolesTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -644,11 +649,20 @@ function ModulesTab() {
                 <span className="text-sm text-slate-500">
                   {module.tasks?.length || 0} tareas
                 </span>
+                {/* BOTONES CORREGIDOS: e.stopPropagation() y e.preventDefault() para evitar anidación interactiva */}
                 <div className="ml-auto flex gap-2" onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="sm" onClick={() => openEditModule(module)}>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={(e) => { e.preventDefault(); openEditModule(module); }}
+                  >
                     <Edit className="w-4 h-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => { setEditingModule(module); setDeleteDialogOpen(true); }}>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={(e) => { e.preventDefault(); setEditingModule(module); setDeleteDialogOpen(true); }}
+                  >
                     <Trash2 className="w-4 h-4 text-red-500" />
                   </Button>
                 </div>
@@ -704,11 +718,14 @@ function ModulesTab() {
         ))}
       </Accordion>
 
-      {/* Module Dialog */}
       <Dialog open={moduleDialogOpen} onOpenChange={setModuleDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" onOpenAutoFocus={(e) => {
+          // Si el scroll sigue fallando, esto suele ayudar
+          document.body.style.pointerEvents = 'auto';
+        }}>
           <DialogHeader>
             <DialogTitle>{editingModule ? "Editar Módulo" : "Nuevo Módulo"}</DialogTitle>
+            <DialogDescription>Configura el nombre y color del bloque de trabajo.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -755,11 +772,14 @@ function ModulesTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Task Dialog */}
       <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onOpenAutoFocus={(e) => {
+          // Si el scroll sigue fallando, esto suele ayudar
+          document.body.style.pointerEvents = 'auto';
+        }}>
           <DialogHeader>
             <DialogTitle>{editingTask ? "Editar Tarea" : "Nueva Tarea"}</DialogTitle>
+            <DialogDescription>Define los pasos requeridos y entregables necesarios para esta tarea.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -795,7 +815,6 @@ function ModulesTab() {
               </Select>
             </div>
 
-            {/* Checklist */}
             <div>
               <Label>Checklist</Label>
               <div className="flex gap-2 mt-1">
@@ -819,7 +838,6 @@ function ModulesTab() {
               </div>
             </div>
 
-            {/* Deliverables */}
             <div>
               <Label>Entregables</Label>
               <div className="flex gap-2 mt-1">
@@ -850,7 +868,6 @@ function ModulesTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Module Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -866,7 +883,6 @@ function ModulesTab() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Delete Task Dialog */}
       <AlertDialog open={deleteTaskDialogOpen} onOpenChange={setDeleteTaskDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -904,7 +920,6 @@ export default function Admin() {
 
   return (
     <div className="space-y-6" data-testid="admin-page">
-      {/* Header */}
       <div>
         <h1 className="font-heading font-bold text-2xl text-slate-900">
           Administración
@@ -914,7 +929,6 @@ export default function Admin() {
         </p>
       </div>
 
-      {/* Stats */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div className="card-base p-4 text-center">
@@ -944,7 +958,6 @@ export default function Admin() {
         </div>
       )}
 
-      {/* Tabs */}
       <Tabs defaultValue="users" className="w-full">
         <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
           <TabsTrigger value="users" className="gap-2">
@@ -984,7 +997,7 @@ export default function Admin() {
   );
 }
 
-// ============ USERS TAB (imported from existing) ============
+// ============ USERS TAB ============
 function UsersTab() {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -1103,11 +1116,14 @@ function UsersTab() {
         </Table>
       </div>
 
-      {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto" onOpenAutoFocus={(e) => {
+        // Si el scroll sigue fallando, esto suele ayudar
+        document.body.style.pointerEvents = 'auto';
+      }}>
           <DialogHeader>
             <DialogTitle>Editar Usuario</DialogTitle>
+            <DialogDescription>Actualiza el rol o el departamento del usuario.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
@@ -1153,7 +1169,6 @@ function UsersTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

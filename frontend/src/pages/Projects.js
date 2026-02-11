@@ -219,69 +219,68 @@ export default function Projects() {
               data-testid={`project-item-${project.id}`}
             >
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                {/* Project Info */}
-                <div
-                  className="flex-1 cursor-pointer"
-                  onClick={() => navigate(`/projects/${project.id}`)}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <h3 className="font-heading font-semibold text-lg text-slate-900">
-                        {project.name}
-                      </h3>
-                      <p className="text-sm text-slate-500">
-                        {project.client_name}
-                      </p>
-                    </div>
-                    <span
-                      className={`status-badge ${statusColors[project.status]}`}
-                    >
-                      {statusLabels[project.status]}
-                    </span>
-                  </div>
-
-                  {/* Dates */}
-                  <div className="flex items-center gap-4 text-sm text-slate-500 mb-3">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {project.start_date} - {project.end_date}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      {project.total_tasks || 0} tareas
-                    </span>
-                  </div>
-
-                  {/* Modules */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {project.modules?.slice(0, 4).map((moduleId) => (
+                {/* Project Info - Corregido para no envolver elementos interactivos */}
+                <div className="flex-1">
+                  <div 
+                    className="cursor-pointer group"
+                    onClick={() => navigate(`/projects/${project.id}`)}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <h3 className="font-heading font-semibold text-lg text-slate-900 group-hover:text-indigo-600 transition-colors">
+                          {project.name}
+                        </h3>
+                        <p className="text-sm text-slate-500">
+                          {project.client_name}
+                        </p>
+                      </div>
                       <span
-                        key={moduleId}
-                        className={`text-xs px-2 py-1 rounded-full border ${MODULE_COLORS[moduleId]}`}
+                        className={`status-badge ${statusColors[project.status]}`}
                       >
-                        {MODULE_NAMES[moduleId]}
+                        {statusLabels[project.status]}
                       </span>
-                    ))}
-                    {project.modules?.length > 4 && (
-                      <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">
-                        +{project.modules.length - 4} más
-                      </span>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Progress */}
-                  <div className="flex items-center gap-3">
-                    <Progress
-                      value={project.progress || 0}
-                      className="flex-1 h-2"
-                    />
-                    <span className="text-sm font-medium text-slate-700 w-12 text-right">
-                      {project.progress || 0}%
-                    </span>
+                    <div className="flex items-center gap-4 text-sm text-slate-500 mb-3">
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        {project.start_date} - {project.end_date}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="w-4 h-4" />
+                        {project.total_tasks || 0} tareas
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {project.modules?.slice(0, 4).map((moduleId) => (
+                        <span
+                          key={moduleId}
+                          className={`text-xs px-2 py-1 rounded-full border ${MODULE_COLORS[moduleId]}`}
+                        >
+                          {MODULE_NAMES[moduleId]}
+                        </span>
+                      ))}
+                      {project.modules?.length > 4 && (
+                        <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">
+                          +{project.modules.length - 4} más
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <Progress
+                        value={project.progress || 0}
+                        className="flex-1 h-2"
+                      />
+                      <span className="text-sm font-medium text-slate-700 w-12 text-right">
+                        {project.progress || 0}%
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Actions */}
+                {/* Actions - Fuera del div clickeable principal */}
                 <div className="flex items-center gap-2 lg:ml-4">
                   <Button
                     variant="ghost"
