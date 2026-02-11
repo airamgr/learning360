@@ -997,6 +997,9 @@ async def create_task(project_id: str, task_data: TaskCreate, current_user: dict
     
     await db.tasks.insert_one(doc)
     
+    # Remove MongoDB _id field for JSON serialization
+    doc.pop('_id', None)
+    
     return {"message": "Tarea creada", "task": doc}
 
 # ============= NOTIFICATION ENDPOINTS =============
