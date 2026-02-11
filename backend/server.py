@@ -221,6 +221,7 @@ MODULE_TEMPLATES = {
             {
                 "title": "Propuestas de Logotipo",
                 "description": "Diseño y presentación de opciones de logotipo para el proyecto",
+                "assigned_user_type": "creativo",
                 "checklist": [
                     {"text": "Investigación de marca", "completed": False},
                     {"text": "Bocetos iniciales", "completed": False},
@@ -230,13 +231,14 @@ MODULE_TEMPLATES = {
                     {"text": "Versión final aprobada", "completed": False}
                 ],
                 "deliverables": [
-                    {"name": "Documento de propuestas de logo (PDF)", "completed": False},
-                    {"name": "Archivos vectoriales del logo final", "completed": False}
+                    {"name": "Documento de propuestas de logo (PDF)"},
+                    {"name": "Archivos vectoriales del logo final"}
                 ]
             },
             {
                 "title": "Identidad Visual Completa",
                 "description": "Desarrollo de la identidad visual: colores, tipografías, formatos",
+                "assigned_user_type": "creativo",
                 "checklist": [
                     {"text": "Definición de paleta de colores", "completed": False},
                     {"text": "Selección de tipografías", "completed": False},
@@ -244,13 +246,14 @@ MODULE_TEMPLATES = {
                     {"text": "Manual de identidad visual", "completed": False}
                 ],
                 "deliverables": [
-                    {"name": "Manual de Identidad Visual (PDF)", "completed": False},
-                    {"name": "Kit de recursos gráficos", "completed": False}
+                    {"name": "Manual de Identidad Visual (PDF)"},
+                    {"name": "Kit de recursos gráficos"}
                 ]
             },
             {
                 "title": "Señalética de Edificios",
                 "description": "Diseño de señalización para espacios físicos",
+                "assigned_user_type": "creativo",
                 "checklist": [
                     {"text": "Diseño de señalética de accesos", "completed": False},
                     {"text": "Señalética de espacios formativos", "completed": False},
@@ -258,8 +261,8 @@ MODULE_TEMPLATES = {
                     {"text": "Aprobación de diseños", "completed": False}
                 ],
                 "deliverables": [
-                    {"name": "Planos de señalética", "completed": False},
-                    {"name": "Archivos para producción", "completed": False}
+                    {"name": "Planos de señalética"},
+                    {"name": "Archivos para producción"}
                 ]
             }
         ]
@@ -271,6 +274,7 @@ MODULE_TEMPLATES = {
             {
                 "title": "Portal Web Principal",
                 "description": "Desarrollo e implantación del portal web del proyecto",
+                "assigned_user_type": "desarrollo",
                 "checklist": [
                     {"text": "Definición de arquitectura", "completed": False},
                     {"text": "Diseño UX/UI", "completed": False},
@@ -281,13 +285,14 @@ MODULE_TEMPLATES = {
                     {"text": "Despliegue en producción", "completed": False}
                 ],
                 "deliverables": [
-                    {"name": "Portal web operativo", "completed": False},
-                    {"name": "Documentación técnica", "completed": False}
+                    {"name": "Portal web operativo"},
+                    {"name": "Documentación técnica"}
                 ]
             },
             {
                 "title": "Landing Pages y Páginas de Campaña",
                 "description": "Creación de landing pages y squeeze pages para campañas",
+                "assigned_user_type": "desarrollo",
                 "checklist": [
                     {"text": "Diseño de landing pages", "completed": False},
                     {"text": "Desarrollo de squeeze pages", "completed": False},
@@ -295,13 +300,14 @@ MODULE_TEMPLATES = {
                     {"text": "Integración con CRM", "completed": False}
                 ],
                 "deliverables": [
-                    {"name": "Landing pages operativas", "completed": False},
-                    {"name": "Informe de conversión", "completed": False}
+                    {"name": "Landing pages operativas"},
+                    {"name": "Informe de conversión"}
                 ]
             },
             {
                 "title": "Sistema de Gestión de Pagos",
                 "description": "Integración de sistema de pagos y domiciliaciones",
+                "assigned_user_type": "desarrollo",
                 "checklist": [
                     {"text": "Selección de pasarela de pago", "completed": False},
                     {"text": "Integración con plataforma", "completed": False},
@@ -309,15 +315,378 @@ MODULE_TEMPLATES = {
                     {"text": "Testing de transacciones", "completed": False}
                 ],
                 "deliverables": [
-                    {"name": "Sistema de pagos operativo", "completed": False},
-                    {"name": "Manual de uso", "completed": False}
+                    {"name": "Sistema de pagos operativo"},
+                    {"name": "Manual de uso"}
                 ]
             },
             {
                 "title": "Plataforma LMS",
                 "description": "Personalización y parametrización de la plataforma LMS",
+                "assigned_user_type": "desarrollo",
                 "checklist": [
                     {"text": "Personalización visual", "completed": False},
+                    {"text": "Parametrización de cursos", "completed": False},
+                    {"text": "Integración con otros sistemas", "completed": False},
+                    {"text": "Configuración de roles y permisos", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "LMS configurado"},
+                    {"name": "Guía de administración"}
+                ]
+            },
+            {
+                "title": "Sistemas de Streaming",
+                "description": "Configuración de aulas de teleformación y streaming",
+                "assigned_user_type": "desarrollo",
+                "checklist": [
+                    {"text": "Selección de plataforma de streaming", "completed": False},
+                    {"text": "Configuración de aulas virtuales", "completed": False},
+                    {"text": "Integración con LMS", "completed": False},
+                    {"text": "Pruebas de calidad de transmisión", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Sistema de streaming operativo"},
+                    {"name": "Manual de uso para docentes"}
+                ]
+            }
+        ]
+    },
+    "marketing": {
+        "id": "marketing",
+        "name": "Comunicación y Marketing",
+        "tasks": [
+            {
+                "title": "Diseño de Campañas de Marketing",
+                "description": "Planificación y diseño de campañas de comunicación",
+                "assigned_user_type": "marketing",
+                "checklist": [
+                    {"text": "Definición de objetivos", "completed": False},
+                    {"text": "Campaña de Branding", "completed": False},
+                    {"text": "Campaña de Visibilidad", "completed": False},
+                    {"text": "Campaña de Alcance", "completed": False},
+                    {"text": "Calendario de publicaciones", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Plan de Marketing (PDF)"},
+                    {"name": "Calendario editorial"}
+                ]
+            },
+            {
+                "title": "Marketing de Contenidos",
+                "description": "Estrategia de contenidos y posicionamiento orgánico",
+                "assigned_user_type": "marketing",
+                "checklist": [
+                    {"text": "Estrategia de contenidos", "completed": False},
+                    {"text": "Plan de mantenimiento de blog", "completed": False},
+                    {"text": "Análisis de palabras clave", "completed": False},
+                    {"text": "Segmentación de público objetivo", "completed": False},
+                    {"text": "Gestión de presupuestos", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Estrategia SEO"},
+                    {"name": "Informe de keywords"}
+                ]
+            },
+            {
+                "title": "Gestión de Paid Media",
+                "description": "Administración de campañas de publicidad pagada",
+                "assigned_user_type": "marketing",
+                "checklist": [
+                    {"text": "Configuración de cuentas publicitarias", "completed": False},
+                    {"text": "Parametrización de campañas", "completed": False},
+                    {"text": "Creación de audiencias", "completed": False},
+                    {"text": "Optimización continua", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Informe de rendimiento de campañas"},
+                    {"name": "Dashboard de seguimiento"}
+                ]
+            },
+            {
+                "title": "Cuadros de Mando de Adquisición",
+                "description": "Estructuración de dashboards y seguimiento",
+                "assigned_user_type": "marketing",
+                "checklist": [
+                    {"text": "Definición de KPIs", "completed": False},
+                    {"text": "Estructuración de cuadros de mando", "completed": False},
+                    {"text": "Configuración de informes automáticos", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Dashboard de adquisición"},
+                    {"name": "Informes mensuales"}
+                ]
+            }
+        ]
+    },
+    "sales": {
+        "id": "sales",
+        "name": "Atención Comercial",
+        "tasks": [
+            {
+                "title": "Argumentarios de Venta",
+                "description": "Elaboración de argumentarios y highlights del programa",
+                "assigned_user_type": "comercial",
+                "checklist": [
+                    {"text": "Identificación de highlights", "completed": False},
+                    {"text": "Redacción de argumentarios", "completed": False},
+                    {"text": "Validación con dirección", "completed": False},
+                    {"text": "Distribución al equipo comercial", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Documento de argumentarios"},
+                    {"name": "Fichas de producto"}
+                ]
+            },
+            {
+                "title": "Training Comercial",
+                "description": "Formación y entrenamiento del equipo comercial",
+                "assigned_user_type": "comercial",
+                "checklist": [
+                    {"text": "Elaboración de guías de venta", "completed": False},
+                    {"text": "Producción de vídeos formativos", "completed": False},
+                    {"text": "Sesiones de entrenamiento", "completed": False},
+                    {"text": "Liderazgo activo de equipos", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Material de apoyo comercial"},
+                    {"name": "Vídeos de formación"}
+                ]
+            },
+            {
+                "title": "Estrategia de Autogeneración",
+                "description": "Project Managers 360º - Captación proactiva",
+                "assigned_user_type": "comercial",
+                "checklist": [
+                    {"text": "Identificación de nichos", "completed": False},
+                    {"text": "Maniobras de captación", "completed": False},
+                    {"text": "Conversión de interés en matrículas", "completed": False},
+                    {"text": "Posicionamiento como autoridad", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Plan de autogeneración"},
+                    {"name": "Informe de resultados"}
+                ]
+            },
+            {
+                "title": "Cuadros de Mando Comercial",
+                "description": "Seguimiento y reporting comercial",
+                "assigned_user_type": "direccion",
+                "checklist": [
+                    {"text": "Estructuración de dashboards comerciales", "completed": False},
+                    {"text": "Configuración de informes", "completed": False},
+                    {"text": "Seguimiento de conversiones", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Dashboard comercial"},
+                    {"name": "Informes de seguimiento"}
+                ]
+            }
+        ]
+    },
+    "content": {
+        "id": "content",
+        "name": "Factoría de Contenidos y Cursos",
+        "tasks": [
+            {
+                "title": "Diseño Instruccional",
+                "description": "Diseño de estrategia pedagógica y contenidos",
+                "assigned_user_type": "contenido",
+                "checklist": [
+                    {"text": "Diseño de estrategia pedagógica PreMáster", "completed": False},
+                    {"text": "Diseño de estrategia pedagógica Máster", "completed": False},
+                    {"text": "Coordinación de expertos", "completed": False},
+                    {"text": "Producción de contenidos", "completed": False},
+                    {"text": "Maquetación", "completed": False},
+                    {"text": "Revisión y mejora", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Diseño instruccional completo"},
+                    {"name": "Contenidos maquetados"}
+                ]
+            },
+            {
+                "title": "Preparación de Plataforma LMS",
+                "description": "Diseño y parametrización de la plataforma de cursos",
+                "assigned_user_type": "contenido",
+                "checklist": [
+                    {"text": "Diseño de plataforma", "completed": False},
+                    {"text": "Parametrización", "completed": False},
+                    {"text": "Diseño de cursos", "completed": False},
+                    {"text": "Preparación de espacios", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Plataforma configurada"},
+                    {"name": "Estructura de cursos"}
+                ]
+            },
+            {
+                "title": "Montaje de Contenidos en LMS",
+                "description": "Carga y configuración de contenidos en la plataforma",
+                "assigned_user_type": "contenido",
+                "checklist": [
+                    {"text": "Montaje de contenidos en módulos", "completed": False},
+                    {"text": "Configuración de seguimiento", "completed": False},
+                    {"text": "Configuración de dinamización", "completed": False},
+                    {"text": "Diseño de evaluaciones", "completed": False},
+                    {"text": "Parametrización de autoevaluaciones", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Contenidos montados"},
+                    {"name": "Sistema de evaluación configurado"}
+                ]
+            },
+            {
+                "title": "Sistemas de Streaming para Videoclases",
+                "description": "Diseño y producción de entornos síncronos",
+                "assigned_user_type": "contenido",
+                "checklist": [
+                    {"text": "Diseño de entornos de videoclase", "completed": False},
+                    {"text": "Producción de entornos síncronos", "completed": False},
+                    {"text": "Integración con calendario", "completed": False},
+                    {"text": "Pruebas de funcionamiento", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Entorno de videoclases operativo"},
+                    {"name": "Manual para docentes"}
+                ]
+            }
+        ]
+    },
+    "admin": {
+        "id": "admin",
+        "name": "Gestión Administrativa y Financiera",
+        "tasks": [
+            {
+                "title": "Gestión de Prematrículas",
+                "description": "Cobro y gestión de prematrículas",
+                "assigned_user_type": "administracion",
+                "checklist": [
+                    {"text": "Configuración de sistema de cobro", "completed": False},
+                    {"text": "Proceso de cobro de prematrículas", "completed": False},
+                    {"text": "Seguimiento de pagos", "completed": False},
+                    {"text": "Gestión de incidencias", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Informe de prematrículas"},
+                    {"name": "Dashboard de seguimiento"}
+                ]
+            },
+            {
+                "title": "Gestión de Cuotas de Financiación",
+                "description": "Cobro de cuotas y gestión de impagos",
+                "assigned_user_type": "administracion",
+                "checklist": [
+                    {"text": "Configuración de domiciliaciones", "completed": False},
+                    {"text": "Cobro de cuotas mensuales", "completed": False},
+                    {"text": "Gestión de impagos", "completed": False},
+                    {"text": "Cuadros de seguimiento", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Informe de cobros"},
+                    {"name": "Informe de impagos"}
+                ]
+            },
+            {
+                "title": "Pagos a Docentes",
+                "description": "Gestión de pagos a profesorado y colaboradores",
+                "assigned_user_type": "administracion",
+                "checklist": [
+                    {"text": "Registro de docentes troncales", "completed": False},
+                    {"text": "Registro de colaboradores externos", "completed": False},
+                    {"text": "Procesamiento de pagos", "completed": False},
+                    {"text": "Emisión de facturas", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Informe de pagos a docentes"},
+                    {"name": "Registro contable"}
+                ]
+            },
+            {
+                "title": "Comisiones Comerciales",
+                "description": "Control y pago de comisiones al equipo comercial",
+                "assigned_user_type": "administracion",
+                "checklist": [
+                    {"text": "Control de comisiones generadas", "completed": False},
+                    {"text": "Validación de comisiones", "completed": False},
+                    {"text": "Procesamiento de pagos", "completed": False},
+                    {"text": "Informe de comisiones", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Informe de comisiones"},
+                    {"name": "Histórico de pagos"}
+                ]
+            }
+        ]
+    },
+    "academic": {
+        "id": "academic",
+        "name": "Gestión Académica",
+        "tasks": [
+            {
+                "title": "Calendarios Académicos",
+                "description": "Elaboración y seguimiento de calendarios",
+                "assigned_user_type": "academico",
+                "checklist": [
+                    {"text": "Preparación de calendario base", "completed": False},
+                    {"text": "Apertura de módulos", "completed": False},
+                    {"text": "Cierre de módulos", "completed": False},
+                    {"text": "Seguimiento continuo", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Calendario académico completo"},
+                    {"name": "Informe de cumplimiento"}
+                ]
+            },
+            {
+                "title": "Coordinación Docente",
+                "description": "Coordinación del profesorado de cada módulo",
+                "assigned_user_type": "academico",
+                "checklist": [
+                    {"text": "Asignación de profesorado", "completed": False},
+                    {"text": "Revisión de contenidos por edición", "completed": False},
+                    {"text": "Coordinación con expertos externos", "completed": False},
+                    {"text": "Seguimiento de correcciones y feedbacks", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Plan de coordinación docente"},
+                    {"name": "Informe de seguimiento"}
+                ]
+            },
+            {
+                "title": "Dinamización de la Impartición",
+                "description": "Dinamización y seguimiento personalizado",
+                "assigned_user_type": "academico",
+                "checklist": [
+                    {"text": "Dinamización del grupo", "completed": False},
+                    {"text": "Seguimiento personalizado de alumnos", "completed": False},
+                    {"text": "Enlace con profesorado", "completed": False},
+                    {"text": "Enlace con dirección académica", "completed": False},
+                    {"text": "Enlace con administración", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Informe de dinamización"},
+                    {"name": "Seguimiento de alumnos"}
+                ]
+            },
+            {
+                "title": "Actas e Informes Académicos",
+                "description": "Elaboración de documentación académica oficial",
+                "assigned_user_type": "academico",
+                "checklist": [
+                    {"text": "Elaboración de actas", "completed": False},
+                    {"text": "Informes académicos", "completed": False},
+                    {"text": "Documentación para Universidad", "completed": False},
+                    {"text": "Gestión de calidad docente", "completed": False}
+                ],
+                "deliverables": [
+                    {"name": "Actas oficiales"},
+                    {"name": "Informes académicos"},
+                    {"name": "Documentación universitaria"}
+                ]
+            }
+        ]
+    }
+}
                     {"text": "Parametrización de cursos", "completed": False},
                     {"text": "Integración con otros sistemas", "completed": False},
                     {"text": "Configuración de roles y permisos", "completed": False}
