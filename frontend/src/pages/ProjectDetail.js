@@ -81,6 +81,17 @@ const STATUS_CONFIG = {
   completed: { label: "Completada", color: "status-completed", icon: CheckCircle2 },
 };
 
+const USER_TYPE_CONFIG = {
+  comercial: { name: "Comercial", color: "bg-emerald-100 text-emerald-700" },
+  marketing: { name: "Marketing", color: "bg-purple-100 text-purple-700" },
+  administracion: { name: "Administración", color: "bg-slate-100 text-slate-700" },
+  creativo: { name: "Creativo", color: "bg-pink-100 text-pink-700" },
+  contenido: { name: "Contenido", color: "bg-amber-100 text-amber-700" },
+  academico: { name: "Académico", color: "bg-cyan-100 text-cyan-700" },
+  desarrollo: { name: "Desarrollo", color: "bg-blue-100 text-blue-700" },
+  direccion: { name: "Dirección", color: "bg-red-100 text-red-700" },
+};
+
 export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -91,11 +102,22 @@ export default function ProjectDetail() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [users, setUsers] = useState([]);
+  const [userTypes, setUserTypes] = useState([]);
 
   useEffect(() => {
     fetchProject();
     fetchUsers();
+    fetchUserTypes();
   }, [id]);
+
+  const fetchUserTypes = async () => {
+    try {
+      const response = await api.getUserTypes();
+      setUserTypes(response.data);
+    } catch (error) {
+      console.error("Error fetching user types");
+    }
+  };
 
   const fetchProject = async () => {
     try {
