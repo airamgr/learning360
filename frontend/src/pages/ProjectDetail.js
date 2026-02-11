@@ -373,8 +373,11 @@ export default function ProjectDetail() {
                       const checklistCompleted = task.checklist?.filter(
                         (c) => c.completed
                       ).length;
-                      const deliverablesCompleted = task.deliverables?.filter(
-                        (d) => d.completed
+                      const deliverablesApproved = task.deliverables?.filter(
+                        (d) => d.status === "approved"
+                      ).length;
+                      const deliverablesWithFiles = task.deliverables?.filter(
+                        (d) => d.file_url
                       ).length;
 
                       return (
