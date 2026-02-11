@@ -1051,6 +1051,197 @@ async def create_task(project_id: str, task_data: TaskCreate, current_user: dict
     
     return {"message": "Tarea creada", "task": doc}
 
+# ============= DELIVERABLE ENDPOINTS =============
+
+@api_router.get("/projects/{project_id}/deliverables")
+async def get_project_deliverables(project_id: str, current_user: dict = Depends(get_current_user)):
+    """Get all deliverables for a project across all tasks"""
+    tasks = await db.tasks.find({"project_id": project_id}, {"_id": 0}).to_list(1000)
+    
+    deliverables = []
+    for task in tasks:
+        for deliverable in task.get("deliverables", []):
+            deliverables.append({
+                **deliverable,
+                "task_id": task["id"],
+                "task_title": task["title"],
+                "module_id": task["module_id"]
+            })
+    
+    return deliverables
+
+@api_router.get("/tasks/{task_id}/deliverables")
+async def get_task_deliverables(task_id: str, current_user: dict = Depends(get_current_user)):
+    """Get all deliverables for a specific task"""
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    return task.get("deliverables", [])
+
+@api_router.post("/tasks/{task_id}/deliverables")
+async def create_deliverable(task_id: str, deliverable_data: DeliverableCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new deliverable for a task"""
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    
+    new_deliverable = {
+        "id": str(uuid.uuid4()),
+        "name": deliverable_data.name,
+        "description": deliverable_data.description or "",
+        "status": "pending",
+        "due_date": deliverable_data.due_date,
+        "file_name": None,
+        "file_url": None,
+        "file_size": None,
+        "file_type": None,
+        "uploaded_at": None,
+        "uploaded_by": None,
+        "feedback": None,
+        "reviewed_by": None,
+        "reviewed_at": None
+    }
+    
+    deliverables = task.get("deliverables", [])
+    deliverables.append(new_deliverable)
+    
+    await db.tasks.update_one({"id": task_id}, {"$set": {"deliverables": deliverables}})
+    
+    return {"message": "Entregable creado", "deliverable": new_deliverable}
+
+@api_router.put("/tasks/{task_id}/deliverables/{deliverable_id}")
+async def update_deliverable(task_id: str, deliverable_id: str, update_data: DeliverableUpdate, current_user: dict = Depends(get_current_user)):
+    """Update a deliverable's metadata"""
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    
+    deliverables = task.get("deliverables", [])
+    updated = False
+    
+    for i, d in enumerate(deliverables):
+        if d["id"] == deliverable_id:
+            for key, value in update_data.model_dump().items():
+                if value is not None:
+                    deliverables[i][key] = value
+            
+            # If status changed to approved/rejected, record reviewer
+            if update_data.status in ["approved", "rejected"]:
+                deliverables[i]["reviewed_by"] = current_user["id"]
+                deliverables[i]["reviewed_at"] = datetime.now(timezone.utc).isoformat()
+            
+            updated = True
+            break
+    
+    if not updated:
+        raise HTTPException(status_code=404, detail="Entregable no encontrado")
+    
+    await db.tasks.update_one({"id": task_id}, {"$set": {"deliverables": deliverables}})
+    
+    return {"message": "Entregable actualizado"}
+
+@api_router.post("/tasks/{task_id}/deliverables/{deliverable_id}/upload")
+async def upload_deliverable_file(
+    task_id: str, 
+    deliverable_id: str, 
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload a file to a deliverable"""
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    
+    deliverables = task.get("deliverables", [])
+    deliverable_idx = None
+    
+    for i, d in enumerate(deliverables):
+        if d["id"] == deliverable_id:
+            deliverable_idx = i
+            break
+    
+    if deliverable_idx is None:
+        raise HTTPException(status_code=404, detail="Entregable no encontrado")
+    
+    # Save file
+    file_ext = Path(file.filename).suffix
+    unique_filename = f"{deliverable_id}_{uuid.uuid4().hex[:8]}{file_ext}"
+    file_path = UPLOADS_DIR / unique_filename
+    
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Get file size
+    file_size = file_path.stat().st_size
+    
+    # Update deliverable
+    deliverables[deliverable_idx].update({
+        "file_name": file.filename,
+        "file_url": f"/api/uploads/{unique_filename}",
+        "file_size": file_size,
+        "file_type": file.content_type,
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "uploaded_by": current_user["id"],
+        "status": "in_review" if deliverables[deliverable_idx]["status"] == "pending" else deliverables[deliverable_idx]["status"]
+    })
+    
+    await db.tasks.update_one({"id": task_id}, {"$set": {"deliverables": deliverables}})
+    
+    # Create notification for project managers
+    project = await db.projects.find_one({"id": task["project_id"]}, {"_id": 0})
+    if project:
+        managers = await db.users.find({"role": {"$in": ["admin", "project_manager"]}}, {"_id": 0}).to_list(100)
+        for manager in managers:
+            if manager["id"] != current_user["id"]:
+                await create_notification(
+                    user_id=manager["id"],
+                    type="deliverable_uploaded",
+                    title="Nuevo Entregable Subido",
+                    message=f"{current_user['name']} ha subido '{file.filename}' en el proyecto {project['name']}",
+                    project_id=project["id"]
+                )
+    
+    return {
+        "message": "Archivo subido correctamente",
+        "file_url": f"/api/uploads/{unique_filename}",
+        "file_name": file.filename
+    }
+
+@api_router.delete("/tasks/{task_id}/deliverables/{deliverable_id}")
+async def delete_deliverable(task_id: str, deliverable_id: str, current_user: dict = Depends(require_manager_or_admin)):
+    """Delete a deliverable"""
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    
+    deliverables = task.get("deliverables", [])
+    original_length = len(deliverables)
+    
+    # Find and remove file if exists
+    for d in deliverables:
+        if d["id"] == deliverable_id and d.get("file_url"):
+            file_name = d["file_url"].split("/")[-1]
+            file_path = UPLOADS_DIR / file_name
+            if file_path.exists():
+                file_path.unlink()
+    
+    deliverables = [d for d in deliverables if d["id"] != deliverable_id]
+    
+    if len(deliverables) == original_length:
+        raise HTTPException(status_code=404, detail="Entregable no encontrado")
+    
+    await db.tasks.update_one({"id": task_id}, {"$set": {"deliverables": deliverables}})
+    
+    return {"message": "Entregable eliminado"}
+
+@api_router.get("/uploads/{filename}")
+async def get_uploaded_file(filename: str):
+    """Serve uploaded files"""
+    file_path = UPLOADS_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    return FileResponse(file_path)
+
 # ============= NOTIFICATION ENDPOINTS =============
 
 @api_router.get("/notifications")
