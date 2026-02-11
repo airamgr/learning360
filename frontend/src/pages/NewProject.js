@@ -353,10 +353,20 @@ export default function NewProject() {
                         <h3 className="font-medium text-slate-900 text-sm">
                           {module.name}
                         </h3>
-                        <Checkbox
-                          checked={isSelected}
-                          className="data-[state=checked]:bg-indigo-500"
-                        />
+                        <div 
+                          className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                            isSelected 
+                              ? "bg-indigo-500 border-indigo-500" 
+                              : "border-slate-300 bg-white"
+                          }`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {isSelected && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </div>
                       </div>
                       <p className="text-xs text-slate-500 mt-1">
                         {module.description}
