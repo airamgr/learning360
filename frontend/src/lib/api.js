@@ -54,6 +54,42 @@ export const api = {
       headers: getAuthHeader(),
     }),
 
+  // Deliverables
+  getProjectDeliverables: (projectId) =>
+    axios.get(`${API}/projects/${projectId}/deliverables`, {
+      headers: getAuthHeader(),
+    }),
+  getTaskDeliverables: (taskId) =>
+    axios.get(`${API}/tasks/${taskId}/deliverables`, {
+      headers: getAuthHeader(),
+    }),
+  createDeliverable: (taskId, data) =>
+    axios.post(`${API}/tasks/${taskId}/deliverables`, data, {
+      headers: getAuthHeader(),
+    }),
+  updateDeliverable: (taskId, deliverableId, data) =>
+    axios.put(`${API}/tasks/${taskId}/deliverables/${deliverableId}`, data, {
+      headers: getAuthHeader(),
+    }),
+  uploadDeliverableFile: (taskId, deliverableId, file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return axios.post(
+      `${API}/tasks/${taskId}/deliverables/${deliverableId}/upload`,
+      formData,
+      {
+        headers: {
+          ...getAuthHeader(),
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+  },
+  deleteDeliverable: (taskId, deliverableId) =>
+    axios.delete(`${API}/tasks/${taskId}/deliverables/${deliverableId}`, {
+      headers: getAuthHeader(),
+    }),
+
   // Modules
   getModules: () => axios.get(`${API}/modules`, { headers: getAuthHeader() }),
 
