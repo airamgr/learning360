@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
-import { Checkbox } from "../components/ui/checkbox";
 import { Calendar } from "../components/ui/calendar";
 import {
   Popover,
@@ -24,6 +23,7 @@ import {
   BookOpen,
   Calculator,
   GraduationCap,
+  Check,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
