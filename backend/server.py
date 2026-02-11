@@ -1336,6 +1336,11 @@ async def get_modules():
         })
     return modules
 
+@api_router.get("/user-types")
+async def get_user_types():
+    """Get all available user types for task assignment"""
+    return USER_TYPES
+
 # ============= DASHBOARD STATS ENDPOINT =============
 
 @api_router.get("/dashboard/stats")
