@@ -19,17 +19,6 @@ code {
     font-family: 'JetBrains Mono', source-code-pro, Menlo, Monaco, Consolas, monospace;
 }
 
-/* Fuerza el scroll en las modales de Radix */
-[data-radix-portal] [role="dialog"] {
-    overflow-y: auto !important;
-    pointer-events: auto !important;
-}
-
-/* Evita que el body se quede bloqueado si algo falla */
-body[style] {
-    vertical-align: baseline !important;
-}
-
 @layer base {
     :root {
         --background: 210 40% 98%;
@@ -160,4 +149,17 @@ body[style] {
     ring: 2px;
     ring-offset: 2px;
     ring-color: hsl(var(--ring));
+}
+
+/* Fuerza el scroll dentro de cualquier modal de la aplicación */
+[data-radix-portal] [role="dialog"] {
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    pointer-events: auto !important;
+}
+
+/* Evita que el fondo de la página se quede congelado tras un error */
+body {
+    pointer-events: auto !important;
+    overflow: auto !important;
 }

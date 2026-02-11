@@ -508,10 +508,22 @@ export default function ProjectDetail() {
                         <h4 className="text-sm font-medium text-slate-500 mb-2">Asignado a (Tipo)</h4>
                         <Select
                           value={selectedTask.assigned_user_type || "none"}
-                          onValueChange={(value) => {
+                          onValueChange={async (value) => {
                             const newValue = value === "none" ? null : value;
-                            handleUserTypeChange(selectedTask.id, newValue);
-                            setSelectedTask({ ...selectedTask, assigned_user_type: newValue });
+                            try {
+                              // 1. Llamada a la API para guardar en base de datos
+                              await api.updateTask(selectedTask.id, { assigned_user_type: newValue });
+                              
+                              // 2. Actualizar el estado local para que se vea el cambio
+                              setSelectedTask({ ...selectedTask, assigned_user_type: newValue });
+                              
+                              // 3. Refrescar el proyecto
+                              fetchProject();
+                              
+                              toast.success("Asignación guardada y correo enviado");
+                            } catch (error) {
+                              toast.error("Error al guardar la asignación");
+                            }
                           }}
                         >
                           <SelectTrigger className="w-full">

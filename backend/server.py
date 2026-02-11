@@ -1188,29 +1188,27 @@ async def update_task(task_id: str, task_update: TaskUpdate, current_user: dict 
     result = await db.tasks.update_one({"id": task_id}, {"$set": update_data})
     
     # If task was assigned, notify the user
-    if "assigned_to" in update_data and update_data["assigned_to"]:
-        assigned_user = await db.users.find_one({"id": update_data["assigned_to"]}, {"_id": 0})
-        if assigned_user:
+    if "assigned_user_type" in update_data and update_data["assigned_user_type"]:
+        user_type = update_data["assigned_user_type"]
+        # Buscamos todos los usuarios que pertenecen a ese departamento
+        users_in_group = await db.users.find({"user_type": user_type}).to_list(100)
+        
+        for user in users_in_group:
             await create_notification(
-                user_id=update_data["assigned_to"],
+                user_id=user["id"],
                 type="task_assigned",
-                title="Tarea Asignada",
-                message=f"Se te ha asignado la tarea '{original_task['title']}'",
+                title="Nueva Tarea para tu Departamento",
+                message=f"Se ha asignado la tarea '{original_task['title']}' al grupo {user_type}",
                 project_id=original_task["project_id"]
             )
-            # Send email notification
+            # Enviar Email
             await send_email_notification(
-                assigned_user["email"],
-                "Nueva tarea asignada - eLearning 360",
-                f"""
-                <h2>Se te ha asignado una nueva tarea</h2>
-                <p><strong>Tarea:</strong> {original_task['title']}</p>
-                <p><strong>Descripción:</strong> {original_task.get('description', 'Sin descripción')}</p>
-                <p>Accede a la plataforma para ver más detalles.</p>
-                """
+                user["email"],
+                f"Nueva tarea asignada a {user_type}",
+                f"<h2>Hola {user['name']}</h2><p>Hay una nueva tarea para tu departamento: <strong>{original_task['title']}</strong></p>"
             )
     
-    return {"message": "Tarea actualizada"}
+    return {"message": "Tarea actualizada y notificaciones enviadas"}
 
 @api_router.post("/projects/{project_id}/tasks")
 async def create_task(project_id: str, task_data: TaskCreate, current_user: dict = Depends(require_manager_or_admin)):
