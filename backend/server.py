@@ -1112,8 +1112,8 @@ async def create_project(project_data: ProjectCreate, current_user: dict = Depen
     
     await db.projects.insert_one(doc)
     
-    # Generate tasks for selected modules
-    tasks = generate_tasks_for_modules(project.id, project_data.modules, project_data.end_date)
+    # Generate tasks for selected modules (from DB config)
+    tasks = await generate_tasks_for_modules_async(project.id, project_data.modules, project_data.end_date)
     if tasks:
         await db.tasks.insert_many(tasks)
     
