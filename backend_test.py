@@ -181,6 +181,11 @@ class eLearningAPITester:
 
     def test_create_project(self):
         """Test project creation with automatic task generation"""
+        # Check if current user can create projects
+        if not self.admin_user or self.admin_user.get('role') not in ['admin', 'project_manager']:
+            self.log_test("Create Project", False, f"User role '{self.admin_user.get('role') if self.admin_user else 'None'}' cannot create projects")
+            return False
+            
         project_data = {
             "name": "Test eLearning Project",
             "client_name": "Test University",
