@@ -125,8 +125,31 @@ class ChecklistItem(BaseModel):
 class Deliverable(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    completed: bool = False
+    description: str = ""
+    status: str = "pending"  # pending, in_review, approved, rejected
     due_date: Optional[str] = None
+    file_name: Optional[str] = None
+    file_url: Optional[str] = None
+    file_size: Optional[int] = None
+    file_type: Optional[str] = None
+    uploaded_at: Optional[str] = None
+    uploaded_by: Optional[str] = None
+    feedback: Optional[str] = None
+    reviewed_by: Optional[str] = None
+    reviewed_at: Optional[str] = None
+
+class DeliverableCreate(BaseModel):
+    task_id: str
+    name: str
+    description: Optional[str] = ""
+    due_date: Optional[str] = None
+
+class DeliverableUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    due_date: Optional[str] = None
+    feedback: Optional[str] = None
 
 class TaskCreate(BaseModel):
     title: str
