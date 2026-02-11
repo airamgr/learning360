@@ -150,6 +150,16 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleUserTypeChange = async (taskId, newUserType) => {
+    try {
+      await api.updateTask(taskId, { assigned_user_type: newUserType });
+      toast.success("Tipo de usuario actualizado");
+      fetchProject();
+    } catch (error) {
+      toast.error("Error al actualizar el tipo de usuario");
+    }
+  };
+
   const handleChecklistToggle = async (task, checklistItemId) => {
     const updatedChecklist = task.checklist.map((item) =>
       item.id === checklistItemId ? { ...item, completed: !item.completed } : item
