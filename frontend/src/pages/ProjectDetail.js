@@ -519,30 +519,64 @@ export default function ProjectDetail() {
                       </div>
                     )}
 
-                    {/* Status */}
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-500 mb-2">
-                        Estado
-                      </h4>
-                      <Select
-                        value={selectedTask.status}
-                        onValueChange={(value) => {
-                          handleStatusChange(selectedTask.id, value);
-                          setSelectedTask({ ...selectedTask, status: value });
-                        }}
-                      >
-                        <SelectTrigger
-                          className="w-48"
-                          data-testid="task-status-select"
+                    {/* Status and User Type */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-500 mb-2">
+                          Estado
+                        </h4>
+                        <Select
+                          value={selectedTask.status}
+                          onValueChange={(value) => {
+                            handleStatusChange(selectedTask.id, value);
+                            setSelectedTask({ ...selectedTask, status: value });
+                          }}
                         >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pendiente</SelectItem>
-                          <SelectItem value="in_progress">En Progreso</SelectItem>
-                          <SelectItem value="completed">Completada</SelectItem>
-                        </SelectContent>
-                      </Select>
+                          <SelectTrigger
+                            className="w-full"
+                            data-testid="task-status-select"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pendiente</SelectItem>
+                            <SelectItem value="in_progress">En Progreso</SelectItem>
+                            <SelectItem value="completed">Completada</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <h4 className="text-sm font-medium text-slate-500 mb-2">
+                          Asignado a (Tipo)
+                        </h4>
+                        <Select
+                          value={selectedTask.assigned_user_type || "none"}
+                          onValueChange={(value) => {
+                            const newValue = value === "none" ? null : value;
+                            handleUserTypeChange(selectedTask.id, newValue);
+                            setSelectedTask({ ...selectedTask, assigned_user_type: newValue });
+                          }}
+                        >
+                          <SelectTrigger
+                            className="w-full"
+                            data-testid="task-user-type-select"
+                          >
+                            <SelectValue placeholder="Sin asignar" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Sin asignar</SelectItem>
+                            <SelectItem value="comercial">Comercial</SelectItem>
+                            <SelectItem value="marketing">Marketing</SelectItem>
+                            <SelectItem value="administracion">Administración</SelectItem>
+                            <SelectItem value="creativo">Creativo</SelectItem>
+                            <SelectItem value="contenido">Contenido</SelectItem>
+                            <SelectItem value="academico">Académico</SelectItem>
+                            <SelectItem value="desarrollo">Desarrollo</SelectItem>
+                            <SelectItem value="direccion">Dirección</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
                     {/* Checklist */}
