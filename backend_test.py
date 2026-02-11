@@ -298,6 +298,11 @@ class eLearningAPITester:
 
     def test_users_management(self):
         """Test user management (admin only)"""
+        # Check if current user has admin privileges
+        if not self.admin_user or self.admin_user.get('role') not in ['admin', 'project_manager']:
+            self.log_test("Users Management", False, f"User role '{self.admin_user.get('role') if self.admin_user else 'None'}' cannot access admin endpoints")
+            return False
+            
         response = self.run_test("Get Users", "GET", "users", 200)
         if response and isinstance(response, list):
             self.log_test("Users Management", True, f"Found {len(response)} users")
