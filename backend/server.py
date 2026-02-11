@@ -796,7 +796,8 @@ def generate_tasks_for_modules(project_id: str, modules: List[str], end_date: st
                     description=task_template["description"],
                     checklist=[{**item, "id": str(uuid.uuid4())} for item in task_template["checklist"]],
                     deliverables=deliverables,
-                    due_date=end_date
+                    due_date=end_date,
+                    assigned_user_type=task_template.get("assigned_user_type")
                 )
                 task_doc = task.model_dump()
                 task_doc['created_at'] = task_doc['created_at'].isoformat()
