@@ -820,7 +820,8 @@ async def register(user_data: UserCreate):
     user = User(
         email=user_data.email,
         name=user_data.name,
-        role=role
+        role=role,
+        user_type=user_data.user_type
     )
     
     doc = user.model_dump()
@@ -837,7 +838,8 @@ async def register(user_data: UserCreate):
             "id": user.id,
             "email": user.email,
             "name": user.name,
-            "role": role
+            "role": role,
+            "user_type": user.user_type
         }
     }
 
