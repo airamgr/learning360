@@ -757,7 +757,8 @@ class TestProjectCreationWithModules:
             headers=headers, json=project_data)
         
         assert response.status_code == 200
-        project = response.json()
+        data = response.json()
+        project = data.get("project", data)  # Handle both nested and flat response
         project_id = project["id"]
         
         # Get project tasks
