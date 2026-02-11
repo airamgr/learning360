@@ -62,11 +62,25 @@ logger = logging.getLogger(__name__)
 
 # ============= MODELS =============
 
+# ============= USER TYPES =============
+
+USER_TYPES = [
+    {"id": "comercial", "name": "Comercial"},
+    {"id": "marketing", "name": "Marketing"},
+    {"id": "administracion", "name": "Administración"},
+    {"id": "creativo", "name": "Creativo"},
+    {"id": "contenido", "name": "Contenido"},
+    {"id": "academico", "name": "Académico"},
+    {"id": "desarrollo", "name": "Desarrollo"},
+    {"id": "direccion", "name": "Dirección"},
+]
+
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
     name: str
     role: str = "collaborator"  # admin, project_manager, collaborator
+    user_type: Optional[str] = None  # comercial, marketing, etc.
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -77,11 +91,13 @@ class User(BaseModel):
     email: EmailStr
     name: str
     role: str
+    user_type: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserUpdate(BaseModel):
     name: Optional[str] = None
     role: Optional[str] = None
+    user_type: Optional[str] = None
 
 class ModuleConfig(BaseModel):
     id: str
