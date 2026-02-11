@@ -437,6 +437,11 @@ export default function ProjectDetail() {
                                 <h4 className="font-medium text-slate-900">
                                   {task.title}
                                 </h4>
+                                {task.assigned_user_type && USER_TYPE_CONFIG[task.assigned_user_type] && (
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${USER_TYPE_CONFIG[task.assigned_user_type].color}`}>
+                                    {USER_TYPE_CONFIG[task.assigned_user_type].name}
+                                  </span>
+                                )}
                               </div>
                               <p className="text-sm text-slate-500 line-clamp-1">
                                 {task.description}
