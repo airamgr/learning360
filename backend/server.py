@@ -890,6 +890,9 @@ async def create_project(project_data: ProjectCreate, current_user: dict = Depen
             project_id=project.id
         )
     
+    # Remove MongoDB _id field for JSON serialization
+    doc.pop('_id', None)
+    
     return {
         "message": "Proyecto creado exitosamente",
         "project": doc,
