@@ -773,6 +773,70 @@ def decode_token(token: str) -> dict:
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
+# ============= CONFIG LOADERS =============
+
+async def get_user_types_from_db():
+    """Load user types from DB, fallback to defaults"""
+    types = await db.config_user_types.find({}, {"_id": 0}).to_list(100)
+    if not types:
+        # Initialize with defaults
+        for ut in DEFAULT_USER_TYPES:
+            await db.config_user_types.insert_one(ut)
+        return DEFAULT_USER_TYPES
+    return types
+
+async def get_roles_from_db():
+    """Load roles from DB, fallback to defaults"""
+    roles = await db.config_roles.find({}, {"_id": 0}).to_list(100)
+    if not roles:
+        # Initialize with defaults
+        for role in DEFAULT_ROLES:
+            await db.config_roles.insert_one(role)
+        return DEFAULT_ROLES
+    return roles
+
+async def get_modules_from_db():
+    """Load modules from DB, fallback to hardcoded MODULE_TEMPLATES"""
+    modules = await db.config_modules.find({}, {"_id": 0}).to_list(100)
+    if not modules:
+        # Initialize with MODULE_TEMPLATES
+        for module_id, module_data in MODULE_TEMPLATES.items():
+            module_doc = {
+                "id": module_id,
+                "name": module_data["name"],
+                "description": "",
+                "icon": get_module_icon(module_id),
+                "color": get_module_color(module_id),
+                "tasks": module_data["tasks"]
+            }
+            await db.config_modules.insert_one(module_doc)
+        return await db.config_modules.find({}, {"_id": 0}).to_list(100)
+    return modules
+
+def get_module_icon(module_id):
+    icons = {
+        "design": "Palette",
+        "tech": "Code",
+        "marketing": "Megaphone",
+        "sales": "Users",
+        "content": "BookOpen",
+        "admin": "Calculator",
+        "academic": "GraduationCap"
+    }
+    return icons.get(module_id, "Package")
+
+def get_module_color(module_id):
+    colors = {
+        "design": "pink",
+        "tech": "blue",
+        "marketing": "purple",
+        "sales": "emerald",
+        "content": "amber",
+        "admin": "slate",
+        "academic": "cyan"
+    }
+    return colors.get(module_id, "slate")
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     token = credentials.credentials
     payload = decode_token(token)
