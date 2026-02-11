@@ -864,8 +864,6 @@ async def login(credentials: UserLogin):
             "user_type": user.get("user_type")
         }
     }
-        }
-    }
 
 @api_router.get("/auth/me")
 async def get_me(current_user: dict = Depends(get_current_user)):
