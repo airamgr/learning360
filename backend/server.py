@@ -887,18 +887,23 @@ async def send_email_notification(to_email: str, subject: str, html_content: str
     except Exception as e:
         logger.error(f"Failed to send email: {str(e)}")
 
-def generate_tasks_for_modules(project_id: str, modules: List[str], end_date: str) -> List[dict]:
+async def generate_tasks_for_modules_async(project_id: str, modules: List[str], end_date: str) -> List[dict]:
+    """Generate tasks from DB-stored module templates"""
     tasks = []
+    db_modules = await get_modules_from_db()
+    modules_dict = {m["id"]: m for m in db_modules}
+    
     for module_id in modules:
-        if module_id in MODULE_TEMPLATES:
-            template = MODULE_TEMPLATES[module_id]
-            for task_template in template["tasks"]:
+        if module_id in modules_dict:
+            template = modules_dict[module_id]
+            for task_template in template.get("tasks", []):
                 # Create deliverables with full structure
                 deliverables = []
-                for item in task_template["deliverables"]:
+                for item in task_template.get("deliverables", []):
+                    name = item.get("name", item) if isinstance(item, dict) else item
                     deliverables.append({
                         "id": str(uuid.uuid4()),
-                        "name": item["name"],
+                        "name": name,
                         "description": "",
                         "status": "pending",
                         "due_date": end_date,
@@ -913,12 +918,20 @@ def generate_tasks_for_modules(project_id: str, modules: List[str], end_date: st
                         "reviewed_at": None
                     })
                 
+                # Process checklist
+                checklist = []
+                for item in task_template.get("checklist", []):
+                    if isinstance(item, dict):
+                        checklist.append({**item, "id": str(uuid.uuid4())})
+                    else:
+                        checklist.append({"id": str(uuid.uuid4()), "text": item, "completed": False})
+                
                 task = Task(
                     project_id=project_id,
                     module_id=module_id,
-                    title=task_template["title"],
-                    description=task_template["description"],
-                    checklist=[{**item, "id": str(uuid.uuid4())} for item in task_template["checklist"]],
+                    title=task_template.get("title", ""),
+                    description=task_template.get("description", ""),
+                    checklist=checklist,
                     deliverables=deliverables,
                     due_date=end_date,
                     assigned_user_type=task_template.get("assigned_user_type")
@@ -927,6 +940,7 @@ def generate_tasks_for_modules(project_id: str, modules: List[str], end_date: st
                 task_doc['created_at'] = task_doc['created_at'].isoformat()
                 tasks.append(task_doc)
     return tasks
+
 
 # ============= AUTH ENDPOINTS =============
 
