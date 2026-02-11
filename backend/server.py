@@ -62,18 +62,78 @@ logger = logging.getLogger(__name__)
 
 # ============= MODELS =============
 
-# ============= USER TYPES =============
+# ============= DEFAULT CONFIGURATIONS =============
 
-USER_TYPES = [
-    {"id": "comercial", "name": "Comercial"},
-    {"id": "marketing", "name": "Marketing"},
-    {"id": "administracion", "name": "Administración"},
-    {"id": "creativo", "name": "Creativo"},
-    {"id": "contenido", "name": "Contenido"},
-    {"id": "academico", "name": "Académico"},
-    {"id": "desarrollo", "name": "Desarrollo"},
-    {"id": "direccion", "name": "Dirección"},
+DEFAULT_USER_TYPES = [
+    {"id": "comercial", "name": "Comercial", "color": "emerald"},
+    {"id": "marketing", "name": "Marketing", "color": "purple"},
+    {"id": "administracion", "name": "Administración", "color": "slate"},
+    {"id": "creativo", "name": "Creativo", "color": "pink"},
+    {"id": "contenido", "name": "Contenido", "color": "amber"},
+    {"id": "academico", "name": "Académico", "color": "cyan"},
+    {"id": "desarrollo", "name": "Desarrollo", "color": "blue"},
+    {"id": "direccion", "name": "Dirección", "color": "red"},
 ]
+
+DEFAULT_ROLES = [
+    {"id": "admin", "name": "Administrador", "description": "Control total del sistema", "permissions": ["all"]},
+    {"id": "project_manager", "name": "Project Manager", "description": "Gestión de proyectos y tareas", "permissions": ["projects", "tasks", "deliverables"]},
+    {"id": "collaborator", "name": "Colaborador", "description": "Visualización y actualización de tareas asignadas", "permissions": ["view", "update_tasks"]},
+]
+
+# ============= CONFIGURATION MODELS =============
+
+class UserTypeConfig(BaseModel):
+    id: str
+    name: str
+    color: str = "slate"
+
+class RoleConfig(BaseModel):
+    id: str
+    name: str
+    description: str = ""
+    permissions: List[str] = []
+
+class TaskTemplate(BaseModel):
+    title: str
+    description: str = ""
+    assigned_user_type: Optional[str] = None
+    checklist: List[dict] = []
+    deliverables: List[dict] = []
+
+class ModuleConfig(BaseModel):
+    id: str
+    name: str
+    description: str = ""
+    icon: str = "Package"
+    color: str = "slate"
+    tasks: List[dict] = []
+
+class ModuleCreate(BaseModel):
+    name: str
+    description: str = ""
+    icon: str = "Package"
+    color: str = "slate"
+
+class ModuleUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    color: Optional[str] = None
+
+class TaskTemplateCreate(BaseModel):
+    title: str
+    description: str = ""
+    assigned_user_type: Optional[str] = None
+    checklist: List[dict] = []
+    deliverables: List[dict] = []
+
+class TaskTemplateUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    assigned_user_type: Optional[str] = None
+    checklist: Optional[List[dict]] = None
+    deliverables: Optional[List[dict]] = None
 
 class UserCreate(BaseModel):
     email: EmailStr
