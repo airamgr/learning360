@@ -1570,6 +1570,8 @@ async def admin_create_module(data: ModuleCreate, current_user: dict = Depends(r
         "tasks": []
     }
     await db.config_modules.insert_one(module_doc)
+    # Remove MongoDB _id before returning
+    module_doc.pop('_id', None)
     return {"message": "Módulo creado", "module": module_doc}
 
 @api_router.put("/admin/modules/{module_id}")
