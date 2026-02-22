@@ -85,6 +85,9 @@ export default function NewProject() {
     name: "",
     client_name: "",
     description: "",
+    cost_per_module: "",
+    total_project_cost: "",
+    enrollment_payment: "",
     start_date: null,
     end_date: null,
     modules: [],
@@ -136,6 +139,9 @@ export default function NewProject() {
         ...formData,
         start_date: format(formData.start_date, "yyyy-MM-dd"),
         end_date: format(formData.end_date, "yyyy-MM-dd"),
+        cost_per_module: Number(formData.cost_per_module) || 0,
+        total_project_cost: Number(formData.total_project_cost) || 0,
+        enrollment_payment: Number(formData.enrollment_payment) || 0,
       };
 
       const response = await api.createProject(payload);
@@ -228,6 +234,64 @@ export default function NewProject() {
                 className="bg-slate-50 border-slate-200 min-h-[100px]"
                 data-testid="project-description-input"
               />
+            </div>
+
+            {/* Financial Info */}
+            <div className="grid sm:grid-cols-3 gap-5">
+              <div className="space-y-2">
+                <Label htmlFor="cost_per_module" className="text-slate-700">
+                  Coste por Módulo
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-500">€</span>
+                  <Input
+                    id="cost_per_module"
+                    type="number"
+                    placeholder="0.00"
+                    value={formData.cost_per_module}
+                    onChange={(e) =>
+                      setFormData({ ...formData, cost_per_module: parseFloat(e.target.value) || 0 })
+                    }
+                    className="pl-7 bg-slate-50 border-slate-200"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="total_project_cost" className="text-slate-700">
+                  Coste Total del Proyecto
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-500">€</span>
+                  <Input
+                    id="total_project_cost"
+                    type="number"
+                    placeholder="0.00"
+                    value={formData.total_project_cost}
+                    onChange={(e) =>
+                      setFormData({ ...formData, total_project_cost: parseFloat(e.target.value) || 0 })
+                    }
+                    className="pl-7 bg-slate-50 border-slate-200"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="enrollment_payment" className="text-slate-700">
+                  Pago por Matrícula
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-slate-500">€</span>
+                  <Input
+                    id="enrollment_payment"
+                    type="number"
+                    placeholder="0.00"
+                    value={formData.enrollment_payment}
+                    onChange={(e) =>
+                      setFormData({ ...formData, enrollment_payment: parseFloat(e.target.value) || 0 })
+                    }
+                    className="pl-7 bg-slate-50 border-slate-200"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-5">

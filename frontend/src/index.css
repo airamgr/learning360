@@ -151,15 +151,8 @@ code {
     ring-color: hsl(var(--ring));
 }
 
-/* Fuerza el scroll dentro de cualquier modal de la aplicación */
-[data-radix-portal] [role="dialog"] {
-    max-height: 90vh !important;
-    overflow-y: auto !important;
-    pointer-events: auto !important;
-}
 
-/* Evita que el fondo de la página se quede congelado tras un error */
-body {
-    pointer-events: auto !important;
-    overflow: auto !important;
+/* Animaciones suaves para las tarjetas */
+.card-base {
+    @apply bg-card text-card-foreground rounded-xl border border-border shadow-sm transition-all duration-200;
 }

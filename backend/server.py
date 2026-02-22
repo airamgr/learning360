@@ -22,6 +22,8 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.units import cm
+from reportlab.platypus import PageBreak, Image as RLImage
+from pypdf import PdfWriter, PdfReader
 
 # Create uploads directory
 UPLOADS_DIR = Path(__file__).parent / "uploads"
@@ -46,6 +48,16 @@ SENDER_EMAIL = os.environ.get('SENDER_EMAIL', 'onboarding@resend.dev')
 
 # Create the main app
 app = FastAPI(title="eLearning 360 Project Manager")
+
+# Configure CORS
+origins = os.environ.get('CORS_ORIGINS', 'http://localhost:3000,http://localhost:5173').split(',')
+app.add_middleware(
+    CORSMiddleware,
+    allow_credentials=True,
+    allow_origins=origins,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -80,6 +92,16 @@ DEFAULT_ROLES = [
     {"id": "project_manager", "name": "Project Manager", "description": "Gestión de proyectos y tareas", "permissions": ["projects", "tasks", "deliverables"]},
     {"id": "collaborator", "name": "Colaborador", "description": "Visualización y actualización de tareas asignadas", "permissions": ["view", "update_tasks"]},
 ]
+
+DEFAULT_MODULE_COSTS = {
+    "design": 1000.0,
+    "tech": 2000.0,
+    "marketing": 1500.0,
+    "sales": 1200.0,
+    "content": 800.0,
+    "admin": 500.0,
+    "academic": 1000.0,
+}
 
 # ============= CONFIGURATION MODELS =============
 
@@ -146,6 +168,13 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: str
+
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     email: EmailStr
@@ -171,6 +200,11 @@ class ProjectCreate(BaseModel):
     end_date: str
     modules: List[str]  # List of module IDs
     description: Optional[str] = ""
+    module_costs: Optional[dict] = None
+    billing_mode: str = "module" # module, project
+    cost_per_module: float = 0.0
+    total_project_cost: float = 0.0
+    enrollment_payment: float = 0.0
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
@@ -179,6 +213,12 @@ class ProjectUpdate(BaseModel):
     end_date: Optional[str] = None
     status: Optional[str] = None
     description: Optional[str] = None
+    modules: Optional[List[str]] = None
+    module_costs: Optional[dict] = None
+    billing_mode: Optional[str] = None
+    cost_per_module: Optional[float] = None
+    total_project_cost: Optional[float] = None
+    enrollment_payment: Optional[float] = None
 
 class Project(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -187,11 +227,16 @@ class Project(BaseModel):
     start_date: str
     end_date: str
     modules: List[str]
+    module_costs: dict = {}
+    billing_mode: str = "module"
     status: str = "active"  # active, completed, on_hold, cancelled
     description: str = ""
     created_by: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     progress: float = 0.0
+    cost_per_module: float = 0.0
+    total_project_cost: float = 0.0
+    enrollment_payment: float = 0.0
 
 class ChecklistItem(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -837,6 +882,18 @@ def get_module_color(module_id):
     }
     return colors.get(module_id, "slate")
 
+def format_date_eu(date_str):
+    if not date_str:
+        return "Pendiente"
+    try:
+        # Si ya viene en formato ISO YYYY-MM-DD
+        if "-" in date_str and len(date_str) >= 10:
+            parts = date_str[:10].split("-")
+            return f"{parts[2]}/{parts[1]}/{parts[0]}"
+    except:
+        pass
+    return date_str
+
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     token = credentials.credentials
     payload = decode_token(token)
@@ -868,10 +925,47 @@ async def create_notification(user_id: str, type: str, title: str, message: str,
     await db.notifications.insert_one(doc)
     return notification
 
-async def send_email_notification(to_email: str, subject: str, html_content: str):
+def get_email_template(title, content, button_text=None, button_url=None):
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            .container {{ font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1e293b; }}
+            .header {{ text-align: center; padding: 20px 0; border-bottom: 2px solid #f1f5f9; }}
+            .logo {{ color: #4f46e5; font-size: 24px; font-weight: bold; text-decoration: none; }}
+            .content {{ padding: 30px 0; line-height: 1.6; }}
+            .title {{ font-size: 22px; font-weight: bold; color: #0f172a; margin-bottom: 20px; }}
+            .card {{ background-color: #f8fafc; border-radius: 12px; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0; }}
+            .btn {{ display: inline-block; background-color: #4f46e5; color: #ffffff !important; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 20px; }}
+            .footer {{ text-align: center; font-size: 12px; color: #94a3b8; margin-top: 40px; border-top: 1px solid #f1f5f9; padding-top: 20px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <a href="#" class="logo">learning360</a>
+            </div>
+            <div class="content">
+                <div class="title">{title}</div>
+                {content}
+                {f'<center><a href="{button_url}" class="btn">{button_text}</a></center>' if button_text and button_url else ''}
+            </div>
+            <div class="footer">
+                &copy; 2024 Innova eLearning 360. Todos los derechos reservados.<br>
+                Este es un correo automático, por favor no respondas directamente.
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+
+async def send_email_notification(to_email: str, subject: str, title: str, content: str, button_text=None, button_url=None):
     if not RESEND_API_KEY:
         logger.warning("RESEND_API_KEY not configured, skipping email")
         return
+    
+    html_content = get_email_template(title, content, button_text, button_url)
     
     try:
         import resend
@@ -886,6 +980,32 @@ async def send_email_notification(to_email: str, subject: str, html_content: str
         logger.info(f"Email sent to {to_email}")
     except Exception as e:
         logger.error(f"Failed to send email: {str(e)}")
+async def get_notification_subscribers(user_type=None):
+    """
+    Returns a list of users who should be 'copied' on notifications:
+    1. Users with user_type: 'direccion'
+    2. Users with role: 'project_manager' and matching user_type
+    """
+    subscribers = []
+    
+    # 1. Dirección (siempre reciben todo)
+    direccion_users = await db.users.find({"user_type": "direccion"}).to_list(100)
+    subscribers.extend(direccion_users)
+    
+    # 2. Responsables de grupo (Project Managers del departamento)
+    if user_type:
+        responsables = await db.users.find({
+            "role": "project_manager",
+            "user_type": user_type
+        }).to_list(100)
+        
+        # Evitar duplicados
+        ids = {u["id"] for u in subscribers}
+        for r in responsables:
+            if r["id"] not in ids:
+                subscribers.append(r)
+                
+    return subscribers
 
 async def generate_tasks_for_modules_async(project_id: str, modules: List[str], end_date: str) -> List[dict]:
     """Generate tasks from DB-stored module templates"""
@@ -1003,6 +1123,71 @@ async def login(credentials: UserLogin):
         }
     }
 
+@api_router.post("/auth/forgot-password")
+async def request_password_reset(request: PasswordResetRequest):
+    try:
+        user = await db.users.find_one({"email": request.email})
+        if not user:
+            # Don't reveal if user exists
+            return {"message": "Si el email existe, recibirás un correo con instrucciones"}
+        
+        # Generate reset token (valid for 1 hour)
+        token = jwt.encode({
+            "sub": user["email"],
+            "type": "reset_password",
+            "exp": datetime.now(timezone.utc) + timedelta(hours=1)
+        }, JWT_SECRET, algorithm=JWT_ALGORITHM)
+        
+        # Reset link
+        reset_link = f"http://localhost:3000/reset-password?token={token}"
+        
+        # Send email
+        await send_email_notification(
+            user["email"],
+            "Restablecer Contraseña - eLearning 360",
+            f"""
+            <h2>Hola {user['name']}</h2>
+            <p>Has solicitado restablecer tu contraseña.</p>
+            <p>Haz clic en el siguiente enlace para crear una nueva contraseña:</p>
+            <a href="{reset_link}">{reset_link}</a>
+            <p>Este enlace expirará en 1 hora.</p>
+            <p>Si no has solicitado esto, puedes ignorar este correo.</p>
+            """
+        )
+        
+        logger.info(f"Password reset requested for {user['email']}. Token: {token}")
+        
+        return {"message": "Si el email existe, recibirás un correo con instrucciones"}
+    except Exception as e:
+        logger.error(f"Error in request_password_reset: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+@api_router.post("/auth/reset-password")
+async def reset_password(data: PasswordResetConfirm):
+    try:
+        payload = jwt.decode(data.token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if payload.get("type") != "reset_password":
+            raise HTTPException(status_code=400, detail="Token inválido")
+            
+        email = payload.get("sub")
+        user = await db.users.find_one({"email": email})
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+            
+        # Update password
+        password_hash = hash_password(data.new_password)
+        await db.users.update_one(
+            {"email": email},
+            {"$set": {"password_hash": password_hash}}
+        )
+        
+        return {"message": "Contraseña actualizada correctamente"}
+        
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="El enlace ha expirado")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=400, detail="Enlace inválido")
+
 @api_router.get("/auth/me")
 async def get_me(current_user: dict = Depends(get_current_user)):
     return current_user
@@ -1043,7 +1228,9 @@ async def delete_user(user_id: str, current_user: dict = Depends(require_admin))
 async def get_projects(current_user: dict = Depends(get_current_user)):
     projects = await db.projects.find({}, {"_id": 0}).to_list(1000)
     
-    # Calculate progress for each project
+    is_management = current_user.get("role") in ["admin", "project_manager"]
+    
+    # Calculate progress for each project and scrub financial data if needed
     for project in projects:
         tasks = await db.tasks.find({"project_id": project["id"]}, {"_id": 0}).to_list(1000)
         if tasks:
@@ -1055,6 +1242,13 @@ async def get_projects(current_user: dict = Depends(get_current_user)):
             project["progress"] = 0
             project["total_tasks"] = 0
             project["completed_tasks"] = 0
+            
+        if not is_management:
+            project.pop("total_project_cost", None)
+            project.pop("enrollment_payment", None)
+            project.pop("module_costs", None)
+            project.pop("cost_per_module", None)
+            project.pop("billing_mode", None)
     
     return projects
 
@@ -1078,14 +1272,24 @@ async def get_project(project_id: str, current_user: dict = Depends(get_current_
         project["total_tasks"] = 0
         project["completed_tasks"] = 0
     
+    # Fetch official modules from DB to respect their order and get latest names
+    db_modules = await db.config_modules.find({}, {"_id": 0}).to_list(100)
+    modules_metadata = {m["id"]: m["name"] for m in db_modules}
+    ordered_ids = [m["id"] for m in db_modules]
+
+    # Sort project modules based on official admin order
+    project_modules = project.get("modules", [])
+    project_modules.sort(key=lambda x: ordered_ids.index(x) if x in ordered_ids else 999)
+    project["modules"] = project_modules
+    
     # Group tasks by module
     modules_data = {}
     for module_id in project["modules"]:
-        if module_id in MODULE_TEMPLATES:
+        if module_id in modules_metadata:
             module_tasks = [t for t in tasks if t["module_id"] == module_id]
             modules_data[module_id] = {
                 "id": module_id,
-                "name": MODULE_TEMPLATES[module_id]["name"],
+                "name": modules_metadata[module_id],
                 "tasks": module_tasks,
                 "total": len(module_tasks),
                 "completed": sum(1 for t in module_tasks if t["status"] == "completed")
@@ -1093,17 +1297,43 @@ async def get_project(project_id: str, current_user: dict = Depends(get_current_
     
     project["modules_data"] = modules_data
     
+    # Scrub financial data if user is not management
+    if current_user.get("role") not in ["admin", "project_manager"]:
+        project.pop("total_project_cost", None)
+        project.pop("enrollment_payment", None)
+        project.pop("module_costs", None)
+        project.pop("cost_per_module", None)
+        project.pop("billing_mode", None)
+        
     return project
 
 @api_router.post("/projects")
 async def create_project(project_data: ProjectCreate, current_user: dict = Depends(require_manager_or_admin)):
+    # Calculate module costs if not provided
+    module_costs = project_data.module_costs or {}
+    for module_id in project_data.modules:
+        if module_id not in module_costs:
+            module_costs[module_id] = DEFAULT_MODULE_COSTS.get(module_id, 0.0)
+            
+    # Calculate total cost based on billing mode
+    total_cost = 0.0
+    if project_data.billing_mode == "project":
+        total_cost = project_data.total_project_cost
+    else:
+        total_cost = sum(module_costs.values())
+
     project = Project(
         name=project_data.name,
         client_name=project_data.client_name,
         start_date=project_data.start_date,
         end_date=project_data.end_date,
         modules=project_data.modules,
+        module_costs=module_costs,
+        billing_mode=project_data.billing_mode,
         description=project_data.description or "",
+        cost_per_module=project_data.cost_per_module, # Keep for backward compatibility if needed
+        total_project_cost=total_cost,
+        enrollment_payment=project_data.enrollment_payment,
         created_by=current_user["id"]
     )
     
@@ -1127,6 +1357,23 @@ async def create_project(project_data: ProjectCreate, current_user: dict = Depen
             message=f"Se ha creado el proyecto '{project.name}' para {project.client_name}",
             project_id=project.id
         )
+        # Enviar Email de creación
+        await send_email_notification(
+            to_email=user["email"],
+            subject=f"Nuevo Proyecto: {project.name}",
+            title="🎯 ¡Nuevo Proyecto en Marcha!",
+            content=f"""
+            <p>Se ha creado un nuevo proyecto en el que podrías estar involucrado:</p>
+            <div class="card">
+                <strong>Proyecto:</strong> {project.name}<br>
+                <strong>Cliente:</strong> {project.client_name}<br>
+                <strong>Cierre:</strong> {format_date_eu(project.end_date)}
+            </div>
+            <p>Accede ahora para revisar los objetivos y cronograma.</p>
+            """,
+            button_text="Ver Proyecto",
+            button_url=f"http://localhost:5173/projects/{project.id}"
+        )
     
     # Remove MongoDB _id field for JSON serialization
     doc.pop('_id', None)
@@ -1139,13 +1386,85 @@ async def create_project(project_data: ProjectCreate, current_user: dict = Depen
 
 @api_router.put("/projects/{project_id}")
 async def update_project(project_id: str, project_update: ProjectUpdate, current_user: dict = Depends(require_manager_or_admin)):
+    # 1. Get current project
+    current_project = await db.projects.find_one({"id": project_id})
+    if not current_project:
+        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
+
     update_data = {k: v for k, v in project_update.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="No hay datos para actualizar")
     
+    # 2. Handle Module Changes
+    if "modules" in update_data:
+        new_modules_list = update_data["modules"]
+        old_modules_list = current_project.get("modules", [])
+        
+        # Find newly added modules
+        modules_to_add = [m for m in new_modules_list if m not in old_modules_list]
+        # Find removed modules
+        modules_to_remove = [m for m in old_modules_list if m not in new_modules_list]
+        
+        if modules_to_add:
+            # Generate tasks ONLY for the new modules
+            end_date = update_data.get("end_date", current_project["end_date"])
+            new_tasks = await generate_tasks_for_modules_async(project_id, modules_to_add, end_date)
+            if new_tasks:
+                await db.tasks.insert_many(new_tasks)
+            
+            logger.info(f"Generated {len(new_tasks)} tasks for new modules in project {project_id}")
+
+        if modules_to_remove:
+            # Delete tasks associated with removed modules
+            delete_result = await db.tasks.delete_many({
+                "project_id": project_id,
+                "module_id": {"$in": modules_to_remove}
+            })
+            logger.info(f"Deleted {delete_result.deleted_count} tasks for removed modules {modules_to_remove} in project {project_id}")
+
+        # Ensure module_costs exists for all new modules
+        current_module_costs = current_project.get("module_costs", {})
+        # Merge if user sent updates to costs
+        if "module_costs" in update_data:
+             current_module_costs.update(update_data["module_costs"])
+        
+        # Add default costs for new modules if not present
+        for m in new_modules_list:
+            if m not in current_module_costs:
+                current_module_costs[m] = DEFAULT_MODULE_COSTS.get(m, 0.0)
+        
+        # Filter costs for only the current modules list
+        final_module_costs = {m: current_module_costs.get(m, 0.0) for m in new_modules_list}
+        update_data["module_costs"] = final_module_costs
+        
+        # update total if mode is module
+        current_mode = update_data.get("billing_mode", current_project.get("billing_mode", "module"))
+        if current_mode == "module":
+            update_data["total_project_cost"] = sum(final_module_costs.values())
+
+    elif "module_costs" in update_data:
+        # If modules list didn't change but costs did
+        current_modules = current_project.get("modules", [])
+        new_costs = update_data["module_costs"]
+        
+        current_mode = update_data.get("billing_mode", current_project.get("billing_mode", "module"))
+        if current_mode == "module":
+            update_data["total_project_cost"] = sum(new_costs.values())
+
+    # Handle explicit billing mode change or total cost update
+    if "billing_mode" in update_data:
+        # If switching to module, recalculate total from existing/updated costs
+        if update_data["billing_mode"] == "module":
+            # Use updated costs if available, else current
+            costs_to_sum = update_data.get("module_costs", current_project.get("module_costs", {}))
+            update_data["total_project_cost"] = sum(costs_to_sum.values())
+        # If switching to project, we expect total_project_cost to be provided or stay as is
+    
+    # If mode is project and total_project_cost is provided, use it (already in update_data)
+
+
+    # 3. Update project
     result = await db.projects.update_one({"id": project_id}, {"$set": update_data})
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     
     return {"message": "Proyecto actualizado"}
 
@@ -1187,27 +1506,99 @@ async def update_task(task_id: str, task_update: TaskUpdate, current_user: dict 
     
     result = await db.tasks.update_one({"id": task_id}, {"$set": update_data})
     
-    # If task was assigned, notify the user
-    if "assigned_user_type" in update_data and update_data["assigned_user_type"]:
-        user_type = update_data["assigned_user_type"]
-        # Buscamos todos los usuarios que pertenecen a ese departamento
-        users_in_group = await db.users.find({"user_type": user_type}).to_list(100)
-        
-        for user in users_in_group:
-            await create_notification(
-                user_id=user["id"],
-                type="task_assigned",
-                title="Nueva Tarea para tu Departamento",
-                message=f"Se ha asignado la tarea '{original_task['title']}' al grupo {user_type}",
-                project_id=original_task["project_id"]
-            )
-            # Enviar Email
-            await send_email_notification(
-                user["email"],
-                f"Nueva tarea asignada a {user_type}",
-                f"<h2>Hola {user['name']}</h2><p>Hay una nueva tarea para tu departamento: <strong>{original_task['title']}</strong></p>"
-            )
+    # Refresh task data to have latest assigned_to/assigned_user_type
+    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
     
+    # If task was assigned, notify the user(s)
+    new_user_type = task.get("assigned_user_type")
+    new_assigned_to = task.get("assigned_to")
+    old_user_type = original_task.get("assigned_user_type")
+    old_assigned_to = original_task.get("assigned_to")
+
+    target_users = []
+    project_name = "Proyecto"
+    project = await db.projects.find_one({"id": original_task["project_id"]})
+    if project:
+        project_name = project.get("name", "Proyecto")
+
+    # Case 1: A specific user is assigned (new or changed)
+    if new_assigned_to and new_assigned_to != old_assigned_to:
+        user = await db.users.find_one({"id": new_assigned_to}, {"_id": 0})
+        if user and user["id"] != current_user["id"]:
+            target_users = [user]
+            
+    # Case 2: No specific user assigned, but department is set or changed
+    elif new_user_type and not new_assigned_to:
+        # Notify if department changed OR if a specific user was just removed
+        if new_user_type != old_user_type or (old_assigned_to and not new_assigned_to):
+            target_users = await db.users.find({"user_type": new_user_type}).to_list(100)
+            target_users = [u for u in target_users if u["id"] != current_user["id"]]
+
+    # Collect all people to notify
+    recipients = {u["id"]: u for u in target_users}
+    
+    # Check for newly completed checklist items
+    new_completed_items = []
+    if "checklist" in update_data:
+        old_checklist = {item["id"]: item for item in original_task.get("checklist", [])}
+        for item in update_data["checklist"]:
+            if item.get("completed") and not old_checklist.get(item["id"], {}).get("completed"):
+                new_completed_items.append(item["text"])
+
+    # Add Supervisors (Dirección always, PMs if assignment changed, completed or checklist item completed)
+    if new_user_type != old_user_type or new_assigned_to != old_assigned_to or update_data.get("status") == "completed" or new_completed_items:
+        supervisors = await get_notification_subscribers(new_user_type)
+        for s in supervisors:
+            if s["id"] not in recipients and s["id"] != current_user["id"]:
+                recipients[s["id"]] = s
+
+    for user in recipients.values():
+        is_assigned_nominal = user["id"] == new_assigned_to
+        
+        # Build specific message for checklist items
+        subject_action = "Actualización"
+        if update_data.get("status") == "completed":
+            subject_action = "✅ Finalizada"
+        elif new_completed_items:
+            subject_action = f"📈 Progreso ({len(new_completed_items)} puntos)"
+
+        await create_notification(
+            user_id=user["id"],
+            type="task_assignment_update",
+            title=f"Tarea: {subject_action}",
+            message=f"Cambio en '{task['title']}' ({project_name})",
+            project_id=original_task["project_id"]
+        )
+        # Enviar Email Personalizado
+        content_html = f"""
+            <p>Hola {user['name']}, hay novedades en una tarea de <strong>learning360</strong>:</p>
+            <div class="card">
+                <strong>Tarea:</strong> {task['title']}<br>
+                <strong>Proyecto:</strong> {project_name}<br>
+                <strong>Estado:</strong> {task['status'].replace('_', ' ').capitalize()}<br>
+                <strong>Responsable:</strong> {user['name'] if is_assigned_nominal else (new_user_type or 'General')}
+            </div>
+        """
+        
+        if new_completed_items:
+            content_html += f"""
+            <p><strong>Puntos completados recientemente:</strong></p>
+            <ul>
+                {"".join([f"<li>✅ {item}</li>" for item in new_completed_items])}
+            </ul>
+            """
+
+        await send_email_notification(
+            to_email=user["email"],
+            subject=f"[{subject_action}] {task['title']}",
+            title="🎯 Avance en Tarea" if new_completed_items else "📝 Actualización",
+            content=content_html,
+            button_text="Ver Tarea",
+            button_url=f"http://localhost:5173/projects/{original_task['project_id']}"
+        )
+
+    return {"message": "Tarea actualizada y notificaciones enviadas"}
+
     return {"message": "Tarea actualizada y notificaciones enviadas"}
 
 @api_router.post("/projects/{project_id}/tasks")
@@ -1237,6 +1628,61 @@ async def create_task(project_id: str, task_data: TaskCreate, current_user: dict
     doc.pop('_id', None)
     
     return {"message": "Tarea creada", "task": doc}
+
+@api_router.delete("/tasks/{task_id}")
+async def delete_task(task_id: str, current_user: dict = Depends(require_manager_or_admin)):
+    """Delete a task and its associated deliverable files"""
+    task = await db.tasks.find_one({"id": task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    
+    # Clean up files from disk
+    for deliverable in task.get("deliverables", []):
+        if deliverable.get("file_url"):
+            file_name = deliverable["file_url"].split("/")[-1]
+            file_path = UPLOADS_DIR / file_name
+            if file_path.exists():
+                file_path.unlink()
+    
+    await db.tasks.delete_one({"id": task_id})
+    return {"message": "Tarea eliminada exitosamente"}
+@api_router.get("/tasks")
+async def get_tasks(status: Optional[str] = None, assigned_to: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    query = {}
+    if status:
+        if status == "pending_all":
+            query["status"] = {"$in": ["pending", "in_progress"]}
+        else:
+            query["status"] = status
+    if assigned_to:
+        query["assigned_to"] = assigned_to
+    
+    # Filter: Only tasks from projects with status 'active' or 'on_hold'
+    valid_projects = await db.projects.find(
+        {"status": {"$in": ["active", "on_hold"]}}, 
+        {"id": 1}
+    ).to_list(1000)
+    valid_project_ids = [p["id"] for p in valid_projects]
+    query["project_id"] = {"$in": valid_project_ids}
+    
+    tasks = await db.tasks.find(query, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Enrichment
+    project_ids = list(set([t["project_id"] for t in tasks]))
+    projects = await db.projects.find({"id": {"$in": project_ids}}, {"id": 1, "name": 1, "_id": 0}).to_list(100)
+    project_map = {p["id"]: p["name"] for p in projects}
+    
+    db_modules = await get_modules_from_db()
+    module_names_map = {m["id"]: m["name"] for m in db_modules}
+    module_colors_map = {m["id"]: m["color"] for m in db_modules}
+    
+    for t in tasks:
+        t["project_name"] = project_map.get(t["project_id"], "Desconocido")
+        m_id = t.get("module_id")
+        t["module_name"] = module_names_map.get(m_id, "General")
+        t["module_color"] = module_colors_map.get(m_id, "bg-slate-100 text-slate-500")
+        
+    return tasks
 
 # ============= DELIVERABLE ENDPOINTS =============
 
@@ -1325,6 +1771,42 @@ async def update_deliverable(task_id: str, deliverable_id: str, update_data: Del
     
     await db.tasks.update_one({"id": task_id}, {"$set": {"deliverables": deliverables}})
     
+    # Notify owner of deliverable if status changed (Approved/Rejected)
+    if update_data.status in ["approved", "rejected"]:
+        target_deliverable = next((d for d in deliverables if d["id"] == deliverable_id), None)
+        if target_deliverable:
+            status_label = "APROBADO ✅" if update_data.status == "approved" else "RECHAZADO ❌"
+            color = "#059669" if update_data.status == "approved" else "#dc2626"
+            
+            # 1. Notify Owner
+            recipients = []
+            if target_deliverable.get("uploaded_by"):
+                owner = await db.users.find_one({"id": target_deliverable["uploaded_by"]})
+                if owner: recipients.append(owner)
+            
+            # 2. Notify Supervisors (Dirección + PMs of the group)
+            supervisors = await get_notification_subscribers(task.get("user_type"))
+            for s in supervisors:
+                if s["id"] not in [r["id"] for r in recipients] and s["id"] != current_user["id"]:
+                    recipients.append(s)
+
+            for user in recipients:
+                await send_email_notification(
+                    to_email=user["email"],
+                    subject=f"Revisión: {target_deliverable['name']}",
+                    title="📋 Revisión de Entregable",
+                    content=f"""
+                    <p>El entregable <strong>{target_deliverable['name']}</strong> ha sido revisado:</p>
+                    <div class="card">
+                        <strong>Estado:</strong> <span style="color: {color}; font-weight: bold;">{status_label}</span><br>
+                        <strong>Revisado por:</strong> {current_user['name']}<br>
+                        <strong>Feedback:</strong> {target_deliverable.get('feedback', 'Sin comentarios')}
+                    </div>
+                    """,
+                    button_text="Ver Proyecto",
+                    button_url=f"http://localhost:5173/projects/{task['project_id']}"
+                )
+
     return {"message": "Entregable actualizado"}
 
 @api_router.post("/tasks/{task_id}/deliverables/{deliverable_id}/upload")
@@ -1387,6 +1869,29 @@ async def upload_deliverable_file(
                     message=f"{current_user['name']} ha subido '{file.filename}' en el proyecto {project['name']}",
                     project_id=project["id"]
                 )
+                # Enviar Email a gestores y suscriptores (Dirección + PMs)
+                supervisors = await get_notification_subscribers(task.get("module_id"))
+                all_managers = {m["id"]: m for m in managers}
+                for s in supervisors:
+                    all_managers[s["id"]] = s
+
+                for mgr in all_managers.values():
+                    if mgr["id"] != current_user["id"]:
+                        await send_email_notification(
+                            to_email=mgr["email"],
+                            subject=f"Pendiente de Revisión: {file.filename}",
+                            title="📂 Nuevo Archivo Recibido",
+                            content=f"""
+                            <p>{current_user['name']} ha subido un archivo que requiere supervisión:</p>
+                            <div class="card">
+                                <strong>Proyecto:</strong> {project['name']}<br>
+                                <strong>Tarea:</strong> {task['title']}<br>
+                                <strong>Archivo:</strong> {file.filename}
+                            </div>
+                            """,
+                            button_text="Revisar Ahora",
+                            button_url=f"http://localhost:5173/projects/{project['id']}"
+                        )
     
     return {
         "message": "Archivo subido correctamente",
@@ -1682,15 +2187,22 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     active_projects = await db.projects.count_documents({"status": "active"})
     completed_projects = await db.projects.count_documents({"status": "completed"})
     
-    # Count tasks
-    total_tasks = await db.tasks.count_documents({})
-    pending_tasks = await db.tasks.count_documents({"status": "pending"})
-    in_progress_tasks = await db.tasks.count_documents({"status": "in_progress"})
-    completed_tasks = await db.tasks.count_documents({"status": "completed"})
+    # Filter: Only tasks from projects with status 'active' or 'on_hold'
+    valid_projects = await db.projects.find(
+        {"status": {"$in": ["active", "on_hold"]}}, 
+        {"id": 1}
+    ).to_list(1000)
+    valid_project_ids = [p["id"] for p in valid_projects]
+
+    # Count tasks (filtered by project status)
+    total_tasks = await db.tasks.count_documents({"project_id": {"$in": valid_project_ids}})
+    pending_tasks = await db.tasks.count_documents({"status": "pending", "project_id": {"$in": valid_project_ids}})
+    in_progress_tasks = await db.tasks.count_documents({"status": "in_progress", "project_id": {"$in": valid_project_ids}})
+    completed_tasks = await db.tasks.count_documents({"status": "completed", "project_id": {"$in": valid_project_ids}})
     
-    # Get user's assigned tasks
-    my_tasks = await db.tasks.count_documents({"assigned_to": current_user["id"]})
-    my_pending_tasks = await db.tasks.count_documents({"assigned_to": current_user["id"], "status": "pending"})
+    # Get user's assigned tasks (filtered by project status)
+    my_tasks = await db.tasks.count_documents({"assigned_to": current_user["id"], "project_id": {"$in": valid_project_ids}})
+    my_pending_tasks = await db.tasks.count_documents({"assigned_to": current_user["id"], "status": "pending", "project_id": {"$in": valid_project_ids}})
     
     # Unread notifications
     unread_notifications = await db.notifications.count_documents({"user_id": current_user["id"], "read": False})
@@ -1698,6 +2210,93 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     # Recent projects
     recent_projects = await db.projects.find({}, {"_id": 0}).sort("created_at", -1).to_list(5)
     
+    # Get completed tasks with project and module names (only from active/on_hold projects)
+    completed_tasks_list = await db.tasks.find({
+        "status": "completed",
+        "project_id": {"$in": valid_project_ids}
+    }, {"_id": 0}).to_list(50)
+    
+    # Enrichment: Get project names and module details
+    project_ids = list(set([t["project_id"] for t in completed_tasks_list]))
+    projects = await db.projects.find({"id": {"$in": project_ids}}, {"id": 1, "name": 1, "_id": 0}).to_list(100)
+    project_map = {p["id"]: p["name"] for p in projects}
+    
+    # Get config modules for names and colors
+    db_modules = await get_modules_from_db()
+    module_names_map = {m["id"]: m["name"] for m in db_modules}
+    module_colors_map = {m["id"]: m["color"] for m in db_modules}
+    
+    # Group tasks: Project -> Module -> {"color": color, "tasks": [titles]}
+    grouped_completed = {}
+    for t in completed_tasks_list:
+        p_name = project_map.get(t["project_id"], t["project_id"])
+        m_id = t.get("module_id", "general")
+        m_name = module_names_map.get(m_id, m_id.capitalize())
+        m_color = module_colors_map.get(m_id, "slate")
+        
+        if p_name not in grouped_completed:
+            grouped_completed[p_name] = {}
+        if m_name not in grouped_completed[p_name]:
+            grouped_completed[p_name][m_name] = {"color": m_color, "tasks": []}
+            
+        grouped_completed[p_name][m_name]["tasks"].append(t["title"])
+
+    # --- NEW: Get pending tasks grouped --- (only from active/on_hold projects)
+    pending_tasks_list = await db.tasks.find({
+        "status": {"$in": ["pending", "in_progress"]},
+        "project_id": {"$in": valid_project_ids}
+    }, {"_id": 0}).to_list(100)
+    
+    # Update project_map for any pending projects not in completed
+    pending_project_ids = list(set([t["project_id"] for t in pending_tasks_list if t["project_id"] not in project_map]))
+    if pending_project_ids:
+        pending_projects = await db.projects.find({"id": {"$in": pending_project_ids}}, {"id": 1, "name": 1, "_id": 0}).to_list(100)
+        for p in pending_projects:
+            project_map[p["id"]] = p["name"]
+
+    grouped_pending = {}
+    for t in pending_tasks_list:
+        p_id = t["project_id"]
+        p_name = project_map.get(p_id, p_id)
+        m_id = t.get("module_id", "general")
+        m_name = module_names_map.get(m_id, m_id.capitalize())
+        m_color = module_colors_map.get(m_id, "slate")
+        
+        if p_name not in grouped_pending:
+            grouped_pending[p_name] = {}
+        if m_name not in grouped_pending[p_name]:
+            grouped_pending[p_name][m_name] = {"color": m_color, "tasks": []}
+            
+        grouped_pending[p_name][m_name]["tasks"].append(t["title"])
+
+    # --- NEW: Get My Tasks grouped --- (only from active/on_hold projects)
+    my_tasks_list = await db.tasks.find({
+        "assigned_to": current_user["id"],
+        "project_id": {"$in": valid_project_ids}
+    }, {"_id": 0}).to_list(100)
+    
+    # Update project_map for any projects in my tasks not in others
+    my_project_ids = list(set([t["project_id"] for t in my_tasks_list if t["project_id"] not in project_map]))
+    if my_project_ids:
+        my_projects = await db.projects.find({"id": {"$in": my_project_ids}}, {"id": 1, "name": 1, "_id": 0}).to_list(100)
+        for p in my_projects:
+            project_map[p["id"]] = p["name"]
+
+    grouped_my = {}
+    for t in my_tasks_list:
+        p_id = t["project_id"]
+        p_name = project_map.get(p_id, p_id)
+        m_id = t.get("module_id", "general")
+        m_name = module_names_map.get(m_id, m_id.capitalize())
+        m_color = module_colors_map.get(m_id, "slate")
+        
+        if p_name not in grouped_my:
+            grouped_my[p_name] = {}
+        if m_name not in grouped_my[p_name]:
+            grouped_my[p_name][m_name] = {"color": m_color, "tasks": []}
+            
+        grouped_my[p_name][m_name]["tasks"].append(t["title"])
+
     return {
         "projects": {
             "total": total_projects,
@@ -1715,7 +2314,10 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
             "pending": my_pending_tasks
         },
         "unread_notifications": unread_notifications,
-        "recent_projects": recent_projects
+        "recent_projects": recent_projects,
+        "completed_tasks_grouped": grouped_completed,
+        "pending_tasks_grouped": grouped_pending,
+        "my_tasks_grouped": grouped_my
     }
 
 # ============= PDF EXPORT ENDPOINT =============
@@ -1730,87 +2332,392 @@ async def export_project_pdf(project_id: str, current_user: dict = Depends(get_c
     
     # Create PDF
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=2*cm, leftMargin=2*cm, topMargin=2*cm, bottomMargin=2*cm)
+    doc = SimpleDocTemplate(
+        buffer, 
+        pagesize=A4, 
+        rightMargin=1.5*cm, 
+        leftMargin=1.5*cm, 
+        topMargin=1.5*cm, 
+        bottomMargin=1.5*cm
+    )
     
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=18, spaceAfter=20)
-    heading_style = ParagraphStyle('CustomHeading', parent=styles['Heading2'], fontSize=14, spaceAfter=10, spaceBefore=15)
-    normal_style = styles['Normal']
+    
+    # Custom Styles
+    title_style = ParagraphStyle(
+        'MainTitle', 
+        parent=styles['Heading1'], 
+        fontSize=22, 
+        textColor=colors.HexColor('#0f172a'),
+        spaceAfter=10,
+        alignment=1 # Center
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'Subtitle', 
+        parent=styles['Normal'], 
+        fontSize=12, 
+        textColor=colors.HexColor('#64748b'),
+        alignment=1,
+        spaceAfter=30
+    )
+    
+    section_title_style = ParagraphStyle(
+        'SectionTitle', 
+        parent=styles['Heading2'], 
+        fontSize=16, 
+        textColor=colors.HexColor('#1e293b'),
+        spaceBefore=20,
+        spaceAfter=15,
+        borderPadding=5,
+        borderColor=colors.HexColor('#e2e8f0'),
+        borderWidth=0,
+        borderBottomWidth=1
+    )
+    
+    module_header_style = ParagraphStyle(
+        'ModuleHeader', 
+        parent=styles['Heading3'], 
+        fontSize=14, 
+        textColor=colors.white,
+        backColor=colors.HexColor('#4f46e5'),
+        alignment=0,
+        spaceBefore=15,
+        spaceAfter=10,
+        leftIndent=0,
+        rightIndent=0,
+        borderPadding=6,
+    )
+
+    label_style = ParagraphStyle(
+        'Label', 
+        parent=styles['Normal'], 
+        fontSize=10, 
+        fontName='Helvetica-Bold',
+        textColor=colors.HexColor('#1e293b')
+    )
+    
+    value_style = ParagraphStyle(
+        'Value', 
+        parent=styles['Normal'], 
+        fontSize=10, 
+        textColor=colors.HexColor('#475569')
+    )
+
+    task_title_style = ParagraphStyle(
+        'TaskTitle', 
+        parent=styles['Normal'], 
+        fontSize=11, 
+        fontName='Helvetica-Bold',
+        textColor=colors.HexColor('#334155'),
+        spaceBefore=8
+    )
+
+    task_desc_style = ParagraphStyle(
+        'TaskDesc', 
+        parent=styles['Normal'], 
+        fontSize=9, 
+        textColor=colors.HexColor('#64748b'),
+        leftIndent=10
+    )
+    
+    # --- CUSTOM STYLES ENHANCEMENT ---
+    title_style = ParagraphStyle(
+        'MainTitle', 
+        parent=styles['Heading1'], 
+        fontSize=28, 
+        textColor=colors.white,
+        spaceAfter=20,
+        alignment=1
+    )
+    
+    cover_subtitle_style = ParagraphStyle(
+        'CoverSubtitle', 
+        parent=styles['Normal'], 
+        fontSize=16, 
+        textColor=colors.HexColor('#e2e8f0'),
+        alignment=1,
+        spaceAfter=100
+    )
+
+    module_color_map = {
+        "design": colors.HexColor("#ec4899"),
+        "tech": colors.HexColor("#3b82f6"),
+        "marketing": colors.HexColor("#a855f7"),
+        "sales": colors.HexColor("#10b981"),
+        "content": colors.HexColor("#f59e0b"),
+        "admin": colors.HexColor("#64748b"),
+        "academic": colors.HexColor("#06b6d4")
+    }
     
     elements = []
     
-    # Title
-    elements.append(Paragraph(f"Informe del Proyecto: {project['name']}", title_style))
-    elements.append(Spacer(1, 10))
-    
-    # Project info
-    info_data = [
-        ["Cliente:", project["client_name"]],
-        ["Fecha de inicio:", project["start_date"]],
-        ["Fecha de fin:", project["end_date"]],
-        ["Estado:", project["status"].capitalize()],
-    ]
-    
-    info_table = Table(info_data, colWidths=[4*cm, 12*cm])
-    info_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+    # --- COVER PAGE ---
+    # Create a full-page colored block effect for the cover
+    elements.append(Spacer(1, 150))
+    cover_data = [[Paragraph(f"INFORME DE PROYECTO", title_style)], 
+                  [Paragraph(f"{project['name']}", cover_subtitle_style)]]
+    cover_table = Table(cover_data, colWidths=[18*cm])
+    cover_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#4f46e5')),
+        ('TOPPADDING', (0, 0), (-1, -1), 40),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 40),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ROUNDEDCORNERS', [15, 15, 15, 15]),
     ]))
-    elements.append(info_table)
-    elements.append(Spacer(1, 20))
+    elements.append(cover_table)
     
-    # Tasks by module
-    for module_id in project["modules"]:
-        if module_id in MODULE_TEMPLATES:
-            module_name = MODULE_TEMPLATES[module_id]["name"]
-            module_tasks = [t for t in tasks if t["module_id"] == module_id]
-            
-            elements.append(Paragraph(module_name, heading_style))
-            
-            if module_tasks:
-                task_data = [["Tarea", "Estado", "Progreso"]]
-                for task in module_tasks:
-                    # Calculate checklist progress
-                    checklist = task.get("checklist", [])
-                    if checklist:
-                        completed = sum(1 for item in checklist if item.get("completed", False))
-                        progress = f"{completed}/{len(checklist)}"
-                    else:
-                        progress = "-"
-                    
-                    status_map = {"pending": "Pendiente", "in_progress": "En progreso", "completed": "Completada"}
-                    task_data.append([
-                        task["title"][:40] + ("..." if len(task["title"]) > 40 else ""),
-                        status_map.get(task["status"], task["status"]),
-                        progress
-                    ])
+    elements.append(Spacer(1, 30))
+    elements.append(Paragraph(f"<b>Para:</b> {project['client_name']}", subtitle_style))
+    elements.append(Paragraph(f"<b>Generado el:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}", subtitle_style))
+    elements.append(PageBreak())
+    
+    # --- PROGRESS VISUALIZER ---
+    elements.append(Paragraph("Estado de Ejecución", section_title_style))
+    
+    progress = project.get("progress", 0)
+    # Visual Progress Bar
+    bar_width = 17*cm
+    progress_bar_data = [[
+        Table([[""]], colWidths=[(bar_width * (progress/100.0)) or 1], rowHeights=[0.5*cm],
+              style=[('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#10b981'))])
+    ]]
+    progress_bar_table = Table(progress_bar_data, colWidths=[bar_width], rowHeights=[0.5*cm])
+    progress_bar_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f1f5f9')),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+    ]))
+    
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph(f"<b>Progreso General: {progress}%</b>", value_style))
+    elements.append(progress_bar_table)
+    elements.append(Spacer(1, 10))
+
+    # --- GENERAL INFORMATION ---
+    elements.append(Paragraph("Información General", section_title_style))
+    # ... (rest of general info logic as before but more spaced)
+    gen_data = [
+        [Paragraph("Cliente:", label_style), Paragraph(project["client_name"], value_style)],
+        [Paragraph("Estado:", label_style), Paragraph(project["status"].replace("_", " ").capitalize(), value_style)],
+        [Paragraph("Cronograma:", label_style), Paragraph(f"Desde {project['start_date']} hasta {project['end_date']}", value_style)],
+    ]
+    if project.get("description"):
+        gen_data.append([Paragraph("Descripción:", label_style), Paragraph(project["description"], value_style)])
+    
+    gen_table = Table(gen_data, colWidths=[4*cm, 13*cm])
+    gen_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'TOP'), ('BOTTOMPADDING', (0, 0), (-1, -1), 10)]))
+    elements.append(gen_table)
+    
+    # --- FINANCIAL INFORMATION ---
+    elements.append(Paragraph("Información Financiera", section_title_style))
+    currency_formatter = lambda val: f"{val:,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+    
+    def colored_badge(text, color):
+        return Table([[Paragraph(text, ParagraphStyle('Badge', parent=value_style, textColor=colors.white, alignment=1))]],
+                    style=[('BACKGROUND', (0, 0), (-1, -1), color), ('ROUNDEDCORNERS', [8, 8, 8, 8])])
+
+    fin_data = [
+        [Paragraph("Presupuesto Total:", label_style), Paragraph(currency_formatter(project.get("total_project_cost", 0)), 
+                                                               ParagraphStyle('BoldVal', parent=value_style, fontSize=14, fontName='Helvetica-Bold', textColor=colors.HexColor('#4f46e5')))],
+        [Paragraph("Matrícula:", label_style), Paragraph(currency_formatter(project.get("enrollment_payment", 0)), value_style)],
+        [Paragraph("Facturación:", label_style), Paragraph(f"Modalidad {'Variable' if project.get('billing_mode') == 'module' else 'Fija'}", value_style)],
+    ]
+    fin_table = Table(fin_data, colWidths=[4*cm, 13*cm])
+    fin_table.setStyle(TableStyle([('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('BOTTOMPADDING', (0, 0), (-1, -1), 12)]))
+    elements.append(fin_table)
+    
+    # --- MODULES & TASKS ---
+    elements.append(Paragraph("Desglose de Módulos", section_title_style))
+    
+    db_modules = await get_modules_from_db()
+    modules_metadata = {m["id"]: m["name"] for m in db_modules}
+    ordered_ids = [m["id"] for m in db_modules]
+    
+    # Sort project modules to follow admin order
+    project_sorted_modules = [m for m in project.get("modules", [])]
+    project_sorted_modules.sort(key=lambda x: ordered_ids.index(x) if x in ordered_ids else 999)
+
+    for module_id in project_sorted_modules:
+        module_name = modules_metadata.get(module_id, module_id.capitalize())
+        mod_color = module_color_map.get(module_id, colors.HexColor("#4f46e5"))
+        
+        # Professional Module Header
+        mod_header_data = [[Paragraph(module_name.upper(), ParagraphStyle('MTitle', parent=module_header_style, backColor=None))]]
+        if project.get("billing_mode") == "module":
+            cost = project.get("module_costs", {}).get(module_id, 0)
+            mod_header_data[0].append(Paragraph(f"Presupuesto: {currency_formatter(cost)}", 
+                                              ParagraphStyle('MCost', parent=module_header_style, backColor=None, alignment=2)))
+        
+        mod_header_table = Table(mod_header_data, colWidths=[9*cm, 8*cm])
+        mod_header_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), mod_color),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.white),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 15),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(mod_header_table)
+        
+        module_tasks = [t for t in tasks if t["module_id"] == module_id]
+        if not module_tasks:
+            elements.append(Paragraph("Sin tareas asignadas.", value_style))
+        else:
+            for task in module_tasks:
+                status_color = "#94a3b8" if task["status"] == "pending" else "#6366f1" if task["status"] == "in_progress" else "#10b981"
+                # Task Title with colored bullet
+                elements.append(Paragraph(f'<font color="{status_color}">■</font> <b>{task["title"]}</b>', task_title_style))
                 
-                task_table = Table(task_data, colWidths=[8*cm, 4*cm, 3*cm])
-                task_table.setStyle(TableStyle([
-                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0f172a')),
-                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                    ('FONTSIZE', (0, 0), (-1, -1), 9),
-                    ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                    ('TOPPADDING', (0, 0), (-1, -1), 8),
-                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
-                ]))
-                elements.append(task_table)
-            else:
-                elements.append(Paragraph("No hay tareas en este módulo.", normal_style))
-            
-            elements.append(Spacer(1, 10))
+                if task.get("description"):
+                    elements.append(Paragraph(task["description"], task_desc_style))
+                
+                # Checkbox items
+                for item in task.get("checklist", []):
+                    symbol = "<b>√</b>" if item.get("completed") else "○"
+                    elements.append(Paragraph(f"{symbol} {item.get('text', '')}", 
+                                           ParagraphStyle('Check', parent=styles['Normal'], fontSize=8.5, leftIndent=25, textColor=colors.HexColor('#475569'))))
+                
+                # Inline Deliverables indicator
+                d_count = sum(1 for d in task.get("deliverables", []) if d.get("file_url"))
+                if d_count > 0:
+                    elements.append(Paragraph(f"<i>(Vea Anexo: {d_count} archivos subidos)</i>", 
+                                           ParagraphStyle('DelivSmall', parent=styles['Normal'], fontSize=8, leftIndent=25, italic=True, textColor=colors.HexColor('#6366f1'))))
+                
+                elements.append(Spacer(1, 8))
+        
+        elements.append(Spacer(1, 15))
+
+    # --- GLOBAL DELIVERABLES REPOSITORY ---
+    elements.append(PageBreak())
+    elements.append(Paragraph("Repositorio General de Entregables", section_title_style))
     
+    deliverables_with_files = []
+    for module_id in project.get("modules", []):
+        mod_tasks = [t for t in tasks if t["module_id"] == module_id]
+        for task in mod_tasks:
+            for d in task.get("deliverables", []):
+                if d.get("file_url"):
+                    d['parent_module_name'] = modules_metadata.get(module_id, module_id)
+                    d['parent_task_title'] = task['title']
+                    d['module_color'] = module_color_map.get(module_id, colors.HexColor("#4f46e5"))
+                    deliverables_with_files.append(d)
+            
+    if deliverables_with_files:
+        deliv_table_data = [[Paragraph("Módulo", label_style), Paragraph("Tarea", label_style), 
+                             Paragraph("Entregable (Click para ver)", label_style), Paragraph("Estado", label_style)]]
+        
+        link_style = ParagraphStyle('RepoLink', parent=value_style, textColor=colors.HexColor('#4f46e5'), fontName='Helvetica-Bold')
+
+        for d in deliverables_with_files:
+            # RESTORED: Anchor link to the specific page in the sequential annex
+            deliv_link = f'<a href="#deliv_{d["id"]}">{d["name"]}</a>'
+            
+            deliv_table_data.append([
+                Paragraph(d['parent_module_name'], value_style),
+                Paragraph(d['parent_task_title'], value_style),
+                Paragraph(deliv_link, link_style),
+                d.get("status", "pending").capitalize()
+            ])
+            
+        deliv_table = Table(deliv_table_data, colWidths=[3*cm, 5*cm, 6*cm, 3*cm])
+        deliv_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f8fafc')),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e2e8f0')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'), ('PADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(deliv_table)
+    else:
+        elements.append(Paragraph("No hay entregables registrados.", value_style))
+
+    # Build the main report first
     doc.build(elements)
-    buffer.seek(0)
+    
+    # Initialize the final merged PDF
+    final_output = BytesIO()
+    writer = PdfWriter()
+    
+    # Add the main report pages
+    main_report_reader = PdfReader(BytesIO(buffer.getvalue()))
+    for page in main_report_reader.pages:
+        writer.add_page(page)
+
+    # Add a global bookmark for the report
+    writer.add_outline_item("Resumen Ejecutivo", 0)
+
+    # --- SEQUENTIAL ANNEX ASSEMBLY ---
+    if deliverables_with_files:
+        current_module_bookmark = None
+        last_module_id = None
+        
+        for d in deliverables_with_files:
+            file_name = d["file_url"].split("/")[-1]
+            file_path = UPLOADS_DIR / file_name
+            
+            if not file_path.exists():
+                continue
+
+            # Add Module Bookmarks to the sidebar for better navigation
+            if d.get('module_id') != last_module_id:
+                current_module_bookmark = writer.add_outline_item(d['parent_module_name'], 0)
+                last_module_id = d.get('module_id')
+
+            # Page counter to link from sidebar
+            page_start_index = len(writer.pages)
+            writer.add_outline_item(d['name'], 1, parent=current_module_bookmark)
+
+            # 1. Generate a "Header/Detail" page with Anchor
+            header_buffer = BytesIO()
+            header_doc = SimpleDocTemplate(header_buffer, pagesize=A4, margin=1.5*cm)
+            header_elements = [
+                Spacer(1, 20),
+                # RESTORED: Anchor name for internal linking
+                Paragraph(f'<a name="deliv_{d["id"]}"/><b>ENTREGABLE: {d["name"]}</b>', 
+                         ParagraphStyle('FileTitle', parent=label_style, fontSize=18, textColor=d['module_color'], spaceAfter=10)),
+                Paragraph(f"Módulo: {d['parent_module_name']}", value_style),
+                Paragraph(f"Tarea: {d['parent_task_title']}", value_style),
+                Paragraph(f"Estado de Revisión: {d.get('status', 'pending').capitalize()}", value_style),
+                Spacer(1, 20)
+            ]
+
+            ext = file_path.suffix.lower()
+            
+            if ext in ['.jpg', '.jpeg', '.png', '.webp', '.bmp']:
+                try:
+                    img = RLImage(str(file_path))
+                    aspect = img.imageHeight / float(img.imageWidth)
+                    max_w, max_h = 17*cm, 18*cm
+                    if img.imageWidth > max_w: img.drawWidth = max_w; img.drawHeight = max_w * aspect
+                    if img.drawHeight > max_h: img.drawHeight = max_h; img.drawWidth = max_h / aspect
+                    header_elements.append(img)
+                except Exception:
+                    header_elements.append(Paragraph("[Error cargando imagen]", value_style))
+                
+                header_doc.build(header_elements)
+                reader = PdfReader(BytesIO(header_buffer.getvalue()))
+                for page in reader.pages: writer.add_page(page)
+
+            elif ext == '.pdf':
+                header_elements.append(Paragraph("<i>(El contenido original del documento PDF comienza en la página siguiente)</i>", value_style))
+                header_doc.build(header_elements)
+                
+                h_reader = PdfReader(BytesIO(header_buffer.getvalue()))
+                for page in h_reader.pages: writer.add_page(page)
+                
+                try:
+                    src_reader = PdfReader(str(file_path))
+                    for page in src_reader.pages: writer.add_page(page)
+                except Exception as e:
+                    logger.error(f"Error merging sequential PDF: {e}")
+
+    # Add Bookmark for the end of the document
+    writer.write(final_output)
+    final_output.seek(0)
     
     return StreamingResponse(
-        buffer,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=proyecto_{project_id}.pdf"}
+        final_output, 
+        media_type="application/pdf", 
+        headers={"Content-Disposition": f"attachment; filename=Dossier_{project['name'].replace(' ','_')}.pdf"}
     )
 
 # ============= ROOT ENDPOINT =============
@@ -1822,13 +2729,7 @@ async def root():
 # Include the router in the main app
 app.include_router(api_router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

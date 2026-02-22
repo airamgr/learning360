@@ -37,7 +37,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex" data-testid="login-page">
+    <div className="h-screen flex overflow-hidden" data-testid="login-page">
       {/* Left side - Form */}
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md animate-slide-up">
@@ -107,6 +107,15 @@ export default function Login() {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
             </div>
 
             <Button

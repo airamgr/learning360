@@ -7,9 +7,14 @@ import Dashboard from "./pages/Dashboard";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
 import NewProject from "./pages/NewProject";
+
 import Users from "./pages/Users";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
+import Tasks from "./pages/Tasks";
+import Income from "./pages/Income";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Layout from "./components/Layout";
 import "./App.css";
 
@@ -28,8 +33,11 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user.role !== requiredRole && user.role !== "admin") {
-    return <Navigate to="/dashboard" replace />;
+  if (requiredRole) {
+    const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (!roles.includes(user.role)) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return children;
@@ -73,6 +81,22 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/forgot-password"
+        element={
+          <PublicRoute>
+            <ForgotPassword />
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/reset-password"
+        element={
+          <PublicRoute>
+            <ResetPassword />
+          </PublicRoute>
+        }
+      />
+      <Route
         path="/"
         element={
           <ProtectedRoute>
@@ -83,6 +107,15 @@ function AppRoutes() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="projects" element={<Projects />} />
+        <Route path="tasks" element={<Tasks />} />
+        <Route
+          path="income"
+          element={
+            <ProtectedRoute requiredRole={["admin", "project_manager"]}>
+              <Income />
+            </ProtectedRoute>
+          }
+        />
         <Route path="projects/new" element={<NewProject />} />
         <Route path="projects/:id" element={<ProjectDetail />} />
         <Route

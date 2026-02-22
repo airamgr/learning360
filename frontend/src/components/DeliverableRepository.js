@@ -137,11 +137,10 @@ export function DeliverableCard({ deliverable, taskId, onUpdate, isManager }) {
         <div className="flex items-start gap-4">
           {/* File icon or upload area */}
           <div
-            className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${
-              deliverable.file_url
-                ? "bg-indigo-50"
-                : "bg-slate-100 border-2 border-dashed border-slate-300"
-            }`}
+            className={`w-14 h-14 rounded-xl flex items-center justify-center shrink-0 ${deliverable.file_url
+              ? "bg-indigo-50"
+              : "bg-slate-100 border-2 border-dashed border-slate-300"
+              }`}
           >
             {uploading ? (
               <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
@@ -155,7 +154,7 @@ export function DeliverableCard({ deliverable, taskId, onUpdate, isManager }) {
           {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-1">
-              <h4 className="font-medium text-slate-900 truncate">
+              <h4 className="font-medium text-slate-900">
                 {deliverable.name}
               </h4>
               <Badge
@@ -168,7 +167,7 @@ export function DeliverableCard({ deliverable, taskId, onUpdate, isManager }) {
             </div>
 
             {deliverable.description && (
-              <p className="text-sm text-slate-500 mb-2 line-clamp-2">
+              <p className="text-sm text-slate-500 mb-2">
                 {deliverable.description}
               </p>
             )}
@@ -176,7 +175,7 @@ export function DeliverableCard({ deliverable, taskId, onUpdate, isManager }) {
             {/* File info */}
             {deliverable.file_url ? (
               <div className="flex items-center gap-4 text-xs text-slate-500">
-                <span className="font-medium text-slate-700 truncate max-w-[200px]">
+                <span className="font-medium text-slate-700">
                   {deliverable.file_name}
                 </span>
                 <span>{formatFileSize(deliverable.file_size)}</span>
@@ -220,7 +219,7 @@ export function DeliverableCard({ deliverable, taskId, onUpdate, isManager }) {
             className="hidden"
             onChange={handleFileUpload}
           />
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -245,15 +244,36 @@ export function DeliverableCard({ deliverable, taskId, onUpdate, isManager }) {
           )}
 
           {isManager && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowFeedbackDialog(true)}
-              data-testid={`review-btn-${deliverable.id}`}
-            >
-              <MessageSquare className="w-4 h-4 mr-1" />
-              Revisar
-            </Button>
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFeedbackDialog(true)}
+                data-testid={`review-btn-${deliverable.id}`}
+              >
+                <MessageSquare className="w-4 h-4 mr-1" />
+                Revisar
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                onClick={async () => {
+                  if (window.confirm("¿Estás seguro de que quieres eliminar este entregable?")) {
+                    try {
+                      await api.deleteDeliverable(taskId, deliverable.id);
+                      toast.success("Entregable eliminado");
+                      onUpdate();
+                    } catch (error) {
+                      toast.error("Error al eliminar el entregable");
+                    }
+                  }
+                }}
+                data-testid={`delete-deliverable-btn-${deliverable.id}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -388,7 +408,7 @@ export function DeliverableRepository({
 
       {/* Deliverables grid */}
       {deliverables.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 grid-cols-1">
           {deliverables.map((deliverable) => (
             <DeliverableCard
               key={deliverable.id}

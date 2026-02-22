@@ -12,6 +12,7 @@ import {
   MoreVertical,
   Trash2,
   Edit,
+  Coins,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -207,7 +208,7 @@ export default function Projects() {
 
       {/* Projects List */}
       {filteredProjects.length > 0 ? (
-        <div className="grid gap-4">
+        <div className="grid gap-4 mt-4">
           {filteredProjects.map((project, index) => (
             <div
               key={project.id}
@@ -221,7 +222,7 @@ export default function Projects() {
               <div className="flex flex-col lg:flex-row lg:items-center gap-4">
                 {/* Project Info - Corregido para no envolver elementos interactivos */}
                 <div className="flex-1">
-                  <div 
+                  <div
                     className="cursor-pointer group"
                     onClick={() => navigate(`/projects/${project.id}`)}
                   >
@@ -250,6 +251,12 @@ export default function Projects() {
                         <Users className="w-4 h-4" />
                         {project.total_tasks || 0} tareas
                       </span>
+                      {(isManager || isAdmin) && (
+                        <span className="flex items-center gap-1 font-semibold text-emerald-600">
+                          <Coins className="w-4 h-4" />
+                          {(project.total_project_cost || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap gap-2 mb-3">

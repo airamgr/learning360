@@ -13,6 +13,8 @@ import {
   X,
   Plus,
   GraduationCap,
+  CheckSquare,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
@@ -76,9 +78,21 @@ export default function Layout() {
       show: true,
     },
     {
+      to: "/tasks",
+      icon: CheckSquare,
+      label: "Tareas",
+      show: true,
+    },
+    {
+      to: "/income",
+      icon: DollarSign,
+      label: "Ingresos",
+      show: isManager || isAdmin,
+    },
+    {
       to: "/users",
       icon: Users,
-      label: "Usuarios",
+      label: "Administración",
       show: isAdmin,
     },
   ];
@@ -101,9 +115,8 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-white border-r border-slate-200 z-50 transform transition-transform duration-200 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed top-0 left-0 h-full w-64 bg-white border-r border-slate-200 z-50 transform transition-transform duration-200 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
         data-testid="sidebar"
       >
         <div className="flex flex-col h-full">
@@ -235,9 +248,8 @@ export default function Layout() {
                       notifications.slice(0, 10).map((notification) => (
                         <div
                           key={notification.id}
-                          className={`px-4 py-3 border-b last:border-0 ${
-                            !notification.read ? "bg-indigo-50/50" : ""
-                          }`}
+                          className={`px-4 py-3 border-b last:border-0 ${!notification.read ? "bg-indigo-50/50" : ""
+                            }`}
                         >
                           <p className="text-sm font-medium text-slate-900">
                             {notification.title}

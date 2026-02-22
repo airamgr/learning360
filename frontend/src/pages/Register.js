@@ -56,7 +56,7 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex" data-testid="register-page">
+    <div className="h-screen flex overflow-hidden" data-testid="register-page">
       {/* Left side - Image */}
       <div className="hidden lg:block lg:w-1/2 relative">
         <div className="absolute inset-0 bg-slate-900/10" />
@@ -79,32 +79,32 @@ export default function Register() {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md animate-slide-up">
           {/* Logo */}
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center">
-              <GraduationCap className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center">
+              <GraduationCap className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-heading font-bold text-slate-900 text-xl">
+              <h1 className="font-heading font-bold text-slate-900 text-lg">
                 eLearning 360
               </h1>
-              <span className="text-sm text-slate-500">Project Manager</span>
+              <span className="text-xs text-slate-500">Project Manager</span>
             </div>
           </div>
 
           {/* Title */}
-          <div className="mb-8">
-            <h2 className="font-heading font-bold text-2xl text-slate-900 mb-2">
+          <div className="mb-6">
+            <h2 className="font-heading font-bold text-xl text-slate-900 mb-1">
               Crear Cuenta
             </h2>
-            <p className="text-slate-500">
+            <p className="text-sm text-slate-500">
               Regístrate para acceder a la plataforma
             </p>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-slate-700">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="name" className="text-sm text-slate-700">
                 Nombre completo
               </Label>
               <Input
@@ -119,8 +119,8 @@ export default function Register() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-slate-700">
+            <div className="space-y-1">
+              <Label htmlFor="email" className="text-sm text-slate-700">
                 Email
               </Label>
               <Input
@@ -130,13 +130,13 @@ export default function Register() {
                 placeholder="tu@email.com"
                 value={formData.email}
                 onChange={handleChange}
-                className="h-11 bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-indigo-100"
+                className="h-10 bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-indigo-100"
                 data-testid="register-email-input"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-slate-700">
+            <div className="space-y-1">
+              <Label htmlFor="password" university className="text-sm text-slate-700">
                 Contraseña
               </Label>
               <div className="relative">
@@ -147,7 +147,7 @@ export default function Register() {
                   placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}
-                  className="h-11 bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-indigo-100 pr-10"
+                  className="h-10 bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-indigo-100 pr-10"
                   data-testid="register-password-input"
                 />
                 <button
@@ -156,16 +156,16 @@ export default function Register() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="w-4 h-4" />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-4 h-4" />
                   )}
                 </button>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-slate-700">
+            <div className="space-y-1">
+              <Label htmlFor="confirmPassword" className="text-sm text-slate-700">
                 Confirmar contraseña
               </Label>
               <Input
@@ -175,7 +175,7 @@ export default function Register() {
                 placeholder="••••••••"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="h-11 bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-indigo-100"
+                className="h-10 bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-indigo-100"
                 data-testid="register-confirm-password-input"
               />
             </div>

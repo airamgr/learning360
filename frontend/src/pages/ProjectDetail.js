@@ -33,6 +33,10 @@ import {
   TabsTrigger,
 } from "../components/ui/tabs";
 import { ScrollArea } from "../components/ui/scroll-area";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { Textarea } from "../components/ui/textarea";
+import { DialogFooter } from "../components/ui/dialog";
 import { DeliverableRepository } from "../components/DeliverableRepository";
 import { toast } from "sonner";
 import {
@@ -54,7 +58,12 @@ import {
   GraduationCap,
   FolderOpen,
   ListChecks,
+  Euro,
+  Edit,
+  Trash2,
+  Plus,
 } from "lucide-react";
+import { EditProjectDialog } from "../components/EditProjectDialog";
 
 const MODULE_ICONS = {
   design: Palette,
@@ -96,14 +105,23 @@ const USER_TYPE_CONFIG = {
 export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isManager } = useAuth();
+  const { isManager, user } = useAuth();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
+  const [editProjectOpen, setEditProjectOpen] = useState(false);
+  const [createTaskOpen, setCreateTaskOpen] = useState(false);
+  const [selectedModuleForNewTask, setSelectedModuleForNewTask] = useState(null);
+  const [newTask, setNewTask] = useState({
+    title: "",
+    description: "",
+    due_date: "",
+  });
   const [users, setUsers] = useState([]);
   const [userTypes, setUserTypes] = useState([]);
+  const [newChecklistItemText, setNewChecklistItemText] = useState("");
 
   useEffect(() => {
     fetchProject();
@@ -117,6 +135,22 @@ export default function ProjectDetail() {
       setUserTypes(response.data);
     } catch (error) {
       console.error("Error fetching user types");
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "Pendiente";
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        // Fallback for YYYY-MM-DD
+        const parts = dateStr.split('-');
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        return dateStr;
+      }
+      return new Intl.DateTimeFormat('es-ES').format(date);
+    } catch (e) {
+      return date_str;
     }
   };
 
@@ -174,6 +208,78 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleAddChecklistItem = async () => {
+    if (!newChecklistItemText.trim() || !selectedTask) return;
+
+    const newItem = {
+      id: Math.random().toString(36).substr(2, 9), // Temporary ID if needed, backend usually generates it but here we send the whole list
+      text: newChecklistItemText.trim(),
+      completed: false
+    };
+
+    const updatedChecklist = [...(selectedTask.checklist || []), newItem];
+
+    try {
+      await api.updateTask(selectedTask.id, { checklist: updatedChecklist });
+      setSelectedTask({ ...selectedTask, checklist: updatedChecklist });
+      setNewChecklistItemText("");
+      fetchProject();
+      toast.success("Hito añadido");
+    } catch (error) {
+      toast.error("Error al añadir hito");
+    }
+  };
+
+  const handleDeleteChecklistItem = async (itemId) => {
+    if (!selectedTask) return;
+
+    const updatedChecklist = selectedTask.checklist.filter(item => item.id !== itemId);
+
+    try {
+      await api.updateTask(selectedTask.id, { checklist: updatedChecklist });
+      setSelectedTask({ ...selectedTask, checklist: updatedChecklist });
+      fetchProject();
+      toast.success("Hito eliminado");
+    } catch (error) {
+      toast.error("Error al eliminar hito");
+    }
+  };
+
+  const handleDeleteTask = async (taskId, e) => {
+    e.stopPropagation();
+    if (!window.confirm("¿Estás seguro de que quieres eliminar esta tarea? Esto borrará también sus entregables y archivos.")) {
+      return;
+    }
+    try {
+      await api.deleteTask(taskId);
+      toast.success("Tarea eliminada");
+      fetchProject();
+    } catch (error) {
+      toast.error("Error al eliminar la tarea");
+    }
+  };
+
+  const handleCreateTask = async () => {
+    if (!newTask.title) {
+      toast.error("El título es obligatorio");
+      return;
+    }
+    try {
+      await api.createTask(id, {
+        ...newTask,
+        module_id: selectedModuleForNewTask,
+        checklist: [],
+        deliverables: []
+      });
+      toast.success("Tarea creada exitosamente");
+      setCreateTaskOpen(false);
+      setNewTask({ title: "", description: "", due_date: "" });
+      fetchProject();
+    } catch (error) {
+      toast.error("Error al crear la tarea");
+    }
+  };
+
   const handleExportPdf = async () => {
     setExporting(true);
     try {
@@ -222,6 +328,11 @@ export default function ProjectDetail() {
 
   if (!project) return null;
 
+  const modules_metadata = Object.keys(project.modules_data || {}).reduce((acc, mid) => {
+    acc[mid] = project.modules_data[mid].name;
+    return acc;
+  }, {});
+
   return (
     <div className="space-y-6" data-testid="project-detail-page">
       {/* Header */}
@@ -248,42 +359,64 @@ export default function ProjectDetail() {
             )}
           </div>
         </div>
+      </div>
 
-        <div className="flex items-center gap-3 ml-12 lg:ml-0">
-          {isManager && (
-            <Select
-              value={project.status}
-              onValueChange={handleProjectStatusChange}
-            >
-              <SelectTrigger
-                className="w-40"
-                data-testid="project-status-select"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Activo</SelectItem>
-                <SelectItem value="completed">Completado</SelectItem>
-                <SelectItem value="on_hold">En Espera</SelectItem>
-                <SelectItem value="cancelled">Cancelado</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
+      <div className="flex items-center gap-3 ml-12 lg:ml-0">
+        {isManager && (
+          <>
+            {/* Admin Edit Button */}
+            {/* Note: In a real app we would check for 'admin' role, effectively checking isManager for now as strict requirement was 'Administrador' but logically Project Managers might also edit. Sticking to isManager which includes admins */}
+            {/* But user requested specifically 'Administrator'. Let's check role if possible, or use isManager as proxy if current_user role not available in context easily beyond isManager bool. 
+                   Actually useAuth provides 'user' object. */}
+          </>
+        )}
+
+        {/* Explicitly check for admin role for the Edit button as requested */}
+        {user?.role === 'admin' && (
           <Button
             variant="outline"
-            onClick={handleExportPdf}
-            disabled={exporting}
-            data-testid="export-pdf-btn"
+            onClick={() => setEditProjectOpen(true)}
+            className="gap-2"
           >
-            {exporting ? (
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-            ) : (
-              <Download className="w-4 h-4 mr-2" />
-            )}
-            Exportar PDF
+            <Edit className="w-4 h-4" />
+            Editar Proyecto
           </Button>
-        </div>
+        )}
+
+        {isManager && (
+          <Select
+            value={project.status}
+            onValueChange={handleProjectStatusChange}
+          >
+            <SelectTrigger
+              className="w-40"
+              data-testid="project-status-select"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Activo</SelectItem>
+              <SelectItem value="completed">Completado</SelectItem>
+              <SelectItem value="on_hold">En Espera</SelectItem>
+              <SelectItem value="cancelled">Cancelado</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+        <Button
+          variant="outline"
+          onClick={handleExportPdf}
+          disabled={exporting}
+          data-testid="export-pdf-btn"
+        >
+          {exporting ? (
+            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+          ) : (
+            <Download className="w-4 h-4 mr-2" />
+          )}
+          Exportar PDF
+        </Button>
       </div>
+
 
       {/* Project Stats */}
       <div className="card-base p-6">
@@ -310,18 +443,51 @@ export default function ProjectDetail() {
             <p className="text-sm text-slate-500 mb-1">Fecha Inicio</p>
             <p className="font-medium text-slate-900 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-slate-400" />
-              {project.start_date}
+              {formatDate(project.start_date)}
             </p>
           </div>
           <div>
             <p className="text-sm text-slate-500 mb-1">Fecha Fin</p>
             <p className="font-medium text-slate-900 flex items-center gap-2">
               <Calendar className="w-4 h-4 text-slate-400" />
-              {project.end_date}
+              {formatDate(project.end_date)}
             </p>
           </div>
         </div>
       </div>
+
+      {/* Financial Stats */}
+      {
+        isManager && (
+          <div className="card-base p-6">
+            <h2 className="font-heading font-semibold text-lg text-slate-900 mb-4 flex items-center gap-2">
+              <Euro className="w-5 h-5 text-emerald-600" />
+              Información Financiera
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
+                <p className="text-sm text-blue-600 mb-1 font-medium flex items-center gap-2">
+                  Coste Total Proyecto
+                  {project.billing_mode === "project" && (
+                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full border border-blue-200">
+                      FIJO
+                    </span>
+                  )}
+                </p>
+                <p className="font-heading font-bold text-2xl text-slate-900">
+                  {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(project.total_project_cost || 0)}
+                </p>
+              </div>
+              <div className="p-4 bg-purple-50 rounded-xl border border-purple-100">
+                <p className="text-sm text-purple-600 mb-1 font-medium">Pago por Matrícula</p>
+                <p className="font-heading font-bold text-2xl text-slate-900">
+                  {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(project.enrollment_payment || 0)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )
+      }
 
       {/* Modules */}
       <div className="card-base">
@@ -367,7 +533,14 @@ export default function ProjectDetail() {
                         {moduleData.name}
                       </h3>
                       <p className="text-sm text-slate-500">
-                        {moduleData.completed}/{moduleData.total} tareas
+                        <div className="flex items-center gap-2">
+                          <span>{moduleData.completed}/{moduleData.total} tareas</span>
+                          {project.billing_mode === "module" && project.module_costs?.[moduleId] !== undefined && (
+                            <span className="text-xs font-semibold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-full">
+                              {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(project.module_costs[moduleId])}
+                            </span>
+                          )}
+                        </div>
                       </p>
                     </div>
                     <div className="flex items-center gap-3 w-32">
@@ -396,13 +569,12 @@ export default function ProjectDetail() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <StatusIcon
-                                  className={`w-4 h-4 ${
-                                    task.status === "completed"
-                                      ? "text-emerald-500"
-                                      : task.status === "in_progress"
+                                  className={`w-4 h-4 ${task.status === "completed"
+                                    ? "text-emerald-500"
+                                    : task.status === "in_progress"
                                       ? "text-indigo-500"
                                       : "text-slate-400"
-                                  }`}
+                                    }`}
                                 />
                                 <h4 className="font-medium text-slate-900 group-hover:text-indigo-600 transition-colors">
                                   {task.title}
@@ -417,6 +589,18 @@ export default function ProjectDetail() {
                                 {task.description}
                               </p>
                               <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                                {task.due_date && (
+                                  <span className="flex items-center gap-1">
+                                    <Calendar className="w-3 h-3" />
+                                    {formatDate(task.due_date)}
+                                  </span>
+                                )}
+                                {task.assigned_to && (
+                                  <span className="flex items-center gap-1">
+                                    <Users className="w-3 h-3" />
+                                    {users.find(u => u.id === task.assigned_to)?.name || 'Cargando...'}
+                                  </span>
+                                )}
                                 {task.checklist?.length > 0 && (
                                   <span className="flex items-center gap-1">
                                     <CheckCircle2 className="w-3 h-3" />
@@ -434,10 +618,35 @@ export default function ProjectDetail() {
                             <Badge className={STATUS_CONFIG[task.status]?.color} variant="secondary">
                               {STATUS_CONFIG[task.status]?.label}
                             </Badge>
+                            {isManager && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => handleDeleteTask(task.id, e)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            )}
                           </div>
                         </div>
                       );
                     })}
+
+                    {isManager && (
+                      <Button
+                        variant="outline"
+                        className="w-full border-dashed border-2 hover:border-indigo-500 hover:bg-indigo-50 hover:text-indigo-600 group py-6"
+                        onClick={() => {
+                          setSelectedModuleForNewTask(moduleId);
+                          setNewTask({ ...newTask, due_date: project.end_date });
+                          setCreateTaskOpen(true);
+                        }}
+                      >
+                        <Plus className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                        Añadir Tarea Personalizada
+                      </Button>
+                    )}
                   </div>
                 </AccordionContent>
               </AccordionItem>
@@ -449,7 +658,7 @@ export default function ProjectDetail() {
       {/* Task Detail Dialog */}
       <Dialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen}>
         {/* CORRECCIÓN: Max-height y overflow en el DialogContent */}
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle className="font-heading text-xl">
               {selectedTask?.title}
@@ -459,7 +668,7 @@ export default function ProjectDetail() {
               Gestiona el progreso, checklist y archivos entregables de esta tarea.
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedTask && (
             <Tabs defaultValue="details" className="flex-1 overflow-hidden flex flex-col">
               <TabsList className="grid w-full grid-cols-2 shrink-0">
@@ -472,7 +681,7 @@ export default function ProjectDetail() {
                   Entregables ({selectedTask.deliverables?.length || 0})
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="details" className="flex-1 overflow-hidden pt-4">
                 <ScrollArea className="h-full max-h-[60vh]">
                   <div className="space-y-6 pr-4 pb-6">
@@ -483,70 +692,109 @@ export default function ProjectDetail() {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="text-sm font-medium text-slate-500 mb-2">Estado</h4>
-                        <Select
-                          value={selectedTask.status}
-                          onValueChange={(value) => {
-                            handleStatusChange(selectedTask.id, value);
-                            setSelectedTask({ ...selectedTask, status: value });
-                          }}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pendiente</SelectItem>
-                            <SelectItem value="in_progress">En Progreso</SelectItem>
-                            <SelectItem value="completed">Completada</SelectItem>
-                          </SelectContent>
-                        </Select>
+                    <div className="grid grid-cols-1 gap-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="text-sm font-medium text-slate-500 mb-2">Estado</h4>
+                          <Select
+                            value={selectedTask.status}
+                            onValueChange={(value) => {
+                              handleStatusChange(selectedTask.id, value);
+                              setSelectedTask({ ...selectedTask, status: value });
+                            }}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pendiente</SelectItem>
+                              <SelectItem value="in_progress">En Progreso</SelectItem>
+                              <SelectItem value="completed">Completada</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div>
+                          <h4 className="text-sm font-medium text-slate-500 mb-2">Asignado a (Departamento)</h4>
+                          <Select
+                            value={selectedTask.assigned_user_type || "none"}
+                            onValueChange={async (value) => {
+                              const newValue = value === "none" ? null : value;
+                              try {
+                                await api.updateTask(selectedTask.id, {
+                                  assigned_user_type: newValue,
+                                  assigned_to: null // Reset specific user when department changes
+                                });
+                                setSelectedTask({
+                                  ...selectedTask,
+                                  assigned_user_type: newValue,
+                                  assigned_to: null
+                                });
+                                fetchProject();
+                                toast.success("Departamento asignado");
+                              } catch (error) {
+                                toast.error("Error al asignar departamento");
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Sin asignar" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Sin asignar</SelectItem>
+                              {Object.entries(USER_TYPE_CONFIG).map(([id, cfg]) => (
+                                <SelectItem key={id} value={id}>{cfg.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
 
                       <div>
-                        <h4 className="text-sm font-medium text-slate-500 mb-2">Asignado a (Tipo)</h4>
+                        <h4 className="text-sm font-medium text-slate-500 mb-2">Asignado a (Usuario)</h4>
                         <Select
-                          value={selectedTask.assigned_user_type || "none"}
+                          disabled={!selectedTask.assigned_user_type}
+                          value={selectedTask.assigned_to || "none"}
                           onValueChange={async (value) => {
                             const newValue = value === "none" ? null : value;
                             try {
-                              // 1. Llamada a la API para guardar en base de datos
-                              await api.updateTask(selectedTask.id, { assigned_user_type: newValue });
-                              
-                              // 2. Actualizar el estado local para que se vea el cambio
-                              setSelectedTask({ ...selectedTask, assigned_user_type: newValue });
-                              
-                              // 3. Refrescar el proyecto
+                              await api.updateTask(selectedTask.id, { assigned_to: newValue });
+                              setSelectedTask({ ...selectedTask, assigned_to: newValue });
                               fetchProject();
-                              
-                              toast.success("Asignación guardada y correo enviado");
+                              toast.success("Usuario asignado correctamente");
                             } catch (error) {
-                              toast.error("Error al guardar la asignación");
+                              toast.error("Error al asignar usuario");
                             }
                           }}
                         >
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Sin asignar" />
+                            <SelectValue placeholder={!selectedTask.assigned_user_type ? "Selecciona primero un departamento" : "Seleccionar usuario..."} />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">Sin asignar</SelectItem>
-                            {Object.entries(USER_TYPE_CONFIG).map(([id, cfg]) => (
-                              <SelectItem key={id} value={id}>{cfg.name}</SelectItem>
-                            ))}
+                            {users
+                              .filter(u => u.user_type === selectedTask.assigned_user_type)
+                              .map((u) => (
+                                <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                              ))}
                           </SelectContent>
                         </Select>
+                        {selectedTask.assigned_user_type && users.filter(u => u.user_type === selectedTask.assigned_user_type).length === 0 && (
+                          <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
+                            No hay usuarios registrados en este departamento
+                          </p>
+                        )}
                       </div>
                     </div>
 
-                    {selectedTask.checklist?.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium text-slate-500 mb-3">
-                          Checklist ({selectedTask.checklist.filter(c => c.completed).length}/{selectedTask.checklist.length})
-                        </h4>
-                        <div className="space-y-2">
-                          {selectedTask.checklist.map((item) => (
-                            <div key={item.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-500 mb-3">
+                        Checklist ({selectedTask.checklist?.filter(c => c.completed).length || 0}/{selectedTask.checklist?.length || 0})
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedTask.checklist?.map((item) => (
+                          <div key={item.id} className="flex items-center justify-between gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors group/check">
+                            <div className="flex items-center gap-3 flex-1">
                               <Checkbox
                                 id={`check-${item.id}`}
                                 checked={item.completed}
@@ -562,14 +810,40 @@ export default function ProjectDetail() {
                                 {item.text}
                               </label>
                             </div>
-                          ))}
-                        </div>
+                            {isManager && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-slate-300 hover:text-red-500 opacity-0 group-hover/check:opacity-100 transition-opacity"
+                                onClick={() => handleDeleteChecklistItem(item.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        ))}
+
+                        {isManager && (
+                          <div className="flex items-center gap-2 mt-4 pt-2">
+                            <Input
+                              placeholder="Nuevo hito o requisito..."
+                              value={newChecklistItemText}
+                              onChange={(e) => setNewChecklistItemText(e.target.value)}
+                              onKeyDown={(e) => e.key === 'Enter' && handleAddChecklistItem()}
+                              className="flex-1 text-sm h-9"
+                            />
+                            <Button size="sm" className="h-9 px-3" onClick={handleAddChecklistItem}>
+                              <Plus className="w-4 h-4 mr-1" />
+                              Añadir
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </ScrollArea>
               </TabsContent>
-              
+
               <TabsContent value="deliverables" className="flex-1 overflow-hidden pt-4">
                 <ScrollArea className="h-full max-h-[60vh]">
                   <div className="pr-4 pb-6">
@@ -590,6 +864,61 @@ export default function ProjectDetail() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+
+
+      <EditProjectDialog
+        project={project}
+        open={editProjectOpen}
+        onOpenChange={setEditProjectOpen}
+        onProjectUpdated={fetchProject}
+      />
+
+      <Dialog open={createTaskOpen} onOpenChange={setCreateTaskOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nueva Tarea para {modules_metadata[selectedModuleForNewTask]}</DialogTitle>
+            <DialogDescription>
+              Añade una tarea personalizada para este proyecto.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="task-title">Título *</Label>
+              <Input
+                id="task-title"
+                value={newTask.title}
+                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                placeholder="Ej: Revisión de artes finales"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-desc">Descripción</Label>
+              <Textarea
+                id="task-desc"
+                value={newTask.description}
+                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                placeholder="Detalles sobre la tarea..."
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="task-due">Fecha de Entrega</Label>
+              <Input
+                id="task-due"
+                type="date"
+                value={newTask.due_date}
+                onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateTaskOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateTask}>Crear Tarea</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div >
   );
 }

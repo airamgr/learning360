@@ -13,6 +13,8 @@ export const api = {
     axios.post(`${API}/auth/login`, { email, password }),
   register: (data) => axios.post(`${API}/auth/register`, data),
   getMe: () => axios.get(`${API}/auth/me`, { headers: getAuthHeader() }),
+  requestPasswordReset: (email) => axios.post(`${API}/auth/forgot-password`, { email }),
+  resetPassword: (token, new_password) => axios.post(`${API}/auth/reset-password`, { token, new_password }),
 
   // Users
   getUsers: () => axios.get(`${API}/users`, { headers: getAuthHeader() }),
@@ -45,6 +47,11 @@ export const api = {
     axios.get(`${API}/projects/${projectId}/tasks`, {
       headers: getAuthHeader(),
     }),
+  getTasks: (params) =>
+    axios.get(`${API}/tasks`, {
+      params,
+      headers: getAuthHeader(),
+    }),
   getTask: (taskId) =>
     axios.get(`${API}/tasks/${taskId}`, { headers: getAuthHeader() }),
   updateTask: (taskId, data) =>
@@ -53,6 +60,8 @@ export const api = {
     axios.post(`${API}/projects/${projectId}/tasks`, data, {
       headers: getAuthHeader(),
     }),
+  deleteTask: (taskId) =>
+    axios.delete(`${API}/tasks/${taskId}`, { headers: getAuthHeader() }),
 
   // Deliverables
   getProjectDeliverables: (projectId) =>
@@ -92,10 +101,10 @@ export const api = {
 
   // Modules
   getModules: () => axios.get(`${API}/modules`, { headers: getAuthHeader() }),
-  
+
   // User Types
   getUserTypes: () => axios.get(`${API}/user-types`, { headers: getAuthHeader() }),
-  
+
   // Roles
   getRoles: () => axios.get(`${API}/roles`, { headers: getAuthHeader() }),
 

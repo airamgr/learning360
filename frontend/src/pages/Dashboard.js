@@ -14,6 +14,30 @@ import {
 import { Button } from "../components/ui/button";
 import { Progress } from "../components/ui/progress";
 
+const COLOR_OPTIONS = [
+  { id: "slate", name: "Gris", class: "bg-slate-100 text-slate-700" },
+  { id: "red", name: "Rojo", class: "bg-red-100 text-red-700" },
+  { id: "orange", name: "Naranja", class: "bg-orange-100 text-orange-700" },
+  { id: "amber", name: "Ámbar", class: "bg-amber-100 text-amber-700" },
+  { id: "yellow", name: "Amarillo", class: "bg-yellow-100 text-yellow-700" },
+  { id: "lime", name: "Lima", class: "bg-lime-100 text-lime-700" },
+  { id: "green", name: "Verde", class: "bg-green-100 text-green-700" },
+  { id: "emerald", name: "Esmeralda", class: "bg-emerald-100 text-emerald-700" },
+  { id: "teal", name: "Teal", class: "bg-teal-100 text-teal-700" },
+  { id: "cyan", name: "Cian", class: "bg-cyan-100 text-cyan-700" },
+  { id: "blue", name: "Azul", class: "bg-blue-100 text-blue-700" },
+  { id: "indigo", name: "Índigo", class: "bg-indigo-100 text-indigo-700" },
+  { id: "violet", name: "Violeta", class: "bg-violet-100 text-violet-700" },
+  { id: "purple", name: "Púrpura", class: "bg-purple-100 text-purple-700" },
+  { id: "fuchsia", name: "Fucsia", class: "bg-fuchsia-100 text-fuchsia-700" },
+  { id: "pink", name: "Rosa", class: "bg-pink-100 text-pink-700" },
+];
+
+const getColorClass = (color) => {
+  const found = COLOR_OPTIONS.find(c => c.id === color);
+  return found ? found.class : "bg-slate-100 text-slate-700";
+};
+
 const StatCard = ({ icon: Icon, label, value, subValue, color, onClick }) => (
   <div
     className="card-base p-6 card-hover cursor-pointer"
@@ -148,7 +172,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Summary Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           icon={FolderKanban}
@@ -160,28 +184,175 @@ export default function Dashboard() {
         />
         <StatCard
           icon={CheckSquare}
-          label="Tareas Completadas"
+          label="Total Completadas"
           value={stats?.tasks?.completed || 0}
-          subValue={`de ${stats?.tasks?.total || 0} tareas`}
+          subValue="Acumulado total"
           color="bg-emerald-100 text-emerald-600"
-          onClick={() => navigate("/projects")}
+          onClick={() => navigate("/tasks?tab=completed")}
         />
         <StatCard
           icon={Clock}
-          label="Tareas Pendientes"
+          label="Total Pendientes"
           value={stats?.tasks?.pending || 0}
-          subValue={`${stats?.tasks?.in_progress || 0} en progreso`}
+          subValue={`${stats?.tasks?.in_progress || 0} en curso`}
           color="bg-amber-100 text-amber-600"
-          onClick={() => navigate("/projects")}
+          onClick={() => navigate("/tasks?tab=pending")}
         />
         <StatCard
           icon={TrendingUp}
           label="Mis Tareas"
           value={stats?.my_tasks?.total || 0}
-          subValue={`${stats?.my_tasks?.pending || 0} pendientes`}
+          subValue={`${stats?.my_tasks?.pending || 0} por hacer`}
           color="bg-blue-100 text-blue-600"
-          onClick={() => navigate("/projects")}
+          onClick={() => navigate("/tasks?tab=my")}
         />
+      </div>
+
+      {/* Detailed Lists Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+        {/* My Tasks Detailed Panel */}
+        <div className="card-base p-6 flex flex-col h-[500px]" data-testid="stat-mis-tareas-detalle">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <h2 className="font-heading font-semibold text-lg text-slate-900">Mis Tareas</h2>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold uppercase">Personal</span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto pr-3 space-y-6 custom-scrollbar">
+            {stats?.my_tasks_grouped && Object.keys(stats.my_tasks_grouped).length > 0 ? (
+              Object.entries(stats.my_tasks_grouped).map(([projectName, modules]) => (
+                <div key={projectName} className="space-y-3">
+                  <h3 className="font-bold text-slate-900 text-sm border-b border-slate-100 pb-1 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    {projectName}
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4 ml-4">
+                    {Object.entries(modules).map(([moduleName, data]) => (
+                      <div key={moduleName} className="space-y-1.5">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${getColorClass(data.color)}`}>
+                          {moduleName}
+                        </span>
+                        <ul className="space-y-1 pl-1">
+                          {data.tasks.map((taskTitle, i) => (
+                            <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
+                              <span className="mt-1.5 w-1 h-1 rounded-full bg-slate-300 flex-shrink-0" />
+                              {taskTitle}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2 opacity-60 text-center">
+                <TrendingUp className="w-12 h-12" />
+                <p className="text-sm italic">No tienes tareas asignadas</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Pending Tasks Detailed Panel */}
+        <div className="card-base p-6 flex flex-col h-[500px]" data-testid="stat-tareas-pendientes-detalle">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                <Clock className="w-5 h-5" />
+              </div>
+              <h2 className="font-heading font-semibold text-lg text-slate-900">Tareas Pendientes</h2>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-[10px] font-bold uppercase">Equipo</span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto pr-3 space-y-6 custom-scrollbar">
+            {stats?.pending_tasks_grouped && Object.keys(stats.pending_tasks_grouped).length > 0 ? (
+              Object.entries(stats.pending_tasks_grouped).map(([projectName, modules]) => (
+                <div key={projectName} className="space-y-3">
+                  <h3 className="font-bold text-slate-900 text-sm border-b border-slate-100 pb-1 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    {projectName}
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4 ml-4">
+                    {Object.entries(modules).map(([moduleName, data]) => (
+                      <div key={moduleName} className="space-y-1.5">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${getColorClass(data.color)}`}>
+                          {moduleName}
+                        </span>
+                        <ul className="space-y-1 pl-1">
+                          {data.tasks.map((taskTitle, i) => (
+                            <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
+                              <span className="mt-1.5 w-1 h-1 rounded-full bg-slate-300 flex-shrink-0" />
+                              {taskTitle}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2 opacity-60 text-center">
+                <Clock className="w-12 h-12" />
+                <p className="text-sm italic">No hay tareas pendientes en el equipo</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Completed Tasks Detailed Panel */}
+        <div className="card-base p-6 flex flex-col h-[500px]" data-testid="stat-tareas-completadas-detalle">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                <CheckSquare className="w-5 h-5" />
+              </div>
+              <h2 className="font-heading font-semibold text-lg text-slate-900">Tareas Completadas</h2>
+            </div>
+            <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase">Histórico</span>
+          </div>
+
+          <div className="flex-1 overflow-y-auto pr-3 space-y-6 custom-scrollbar">
+            {stats?.completed_tasks_grouped && Object.keys(stats.completed_tasks_grouped).length > 0 ? (
+              Object.entries(stats.completed_tasks_grouped).map(([projectName, modules]) => (
+                <div key={projectName} className="space-y-3">
+                  <h3 className="font-bold text-slate-900 text-sm border-b border-slate-100 pb-1 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    {projectName}
+                  </h3>
+                  <div className="grid grid-cols-1 gap-4 ml-4">
+                    {Object.entries(modules).map(([moduleName, data]) => (
+                      <div key={moduleName} className="space-y-1.5">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${getColorClass(data.color)}`}>
+                          {moduleName}
+                        </span>
+                        <ul className="space-y-1 pl-1">
+                          {data.tasks.map((taskTitle, i) => (
+                            <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
+                              <span className="mt-1.5 w-1 h-1 rounded-full bg-slate-300 flex-shrink-0" />
+                              {taskTitle}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 gap-2 opacity-60 text-center">
+                <CheckSquare className="w-12 h-12" />
+                <p className="text-sm italic">Sin tareas completadas recientemente</p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Recent Projects */}
