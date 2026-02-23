@@ -1470,14 +1470,32 @@ async def update_project(project_id: str, project_update: ProjectUpdate, current
 
 @api_router.delete("/projects/{project_id}")
 async def delete_project(project_id: str, current_user: dict = Depends(require_admin)):
-    result = await db.projects.delete_one({"id": project_id})
-    if result.deleted_count == 0:
+    project = await db.projects.find_one({"id": project_id})
+    if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
     
-    # Delete all tasks associated with the project
-    await db.tasks.delete_many({"project_id": project_id})
+    # 1. Get all tasks for this project to handle physical file deletion
+    tasks = await db.tasks.find({"project_id": project_id}).to_list(1000)
     
-    return {"message": "Proyecto y tareas eliminados"}
+    # 2. Clean up physical files from all tasks
+    for task in tasks:
+        for deliverable in task.get("deliverables", []):
+            if deliverable.get("file_url"):
+                file_name = deliverable["file_url"].split("/")[-1]
+                file_path = UPLOADS_DIR / file_name
+                try:
+                    if file_path.exists():
+                        file_path.unlink()
+                        logger.info(f"Deleted physical file: {file_path}")
+                except Exception as e:
+                    logger.error(f"Error deleting file {file_name}: {e}")
+
+    # 3. Delete from DB: Project, Tasks and Notifications
+    await db.projects.delete_one({"id": project_id})
+    await db.tasks.delete_many({"project_id": project_id})
+    await db.notifications.delete_many({"project_id": project_id})
+    
+    return {"message": "Proyecto, tareas y archivos asociados eliminados correctamente"}
 
 # ============= TASK ENDPOINTS =============
 
